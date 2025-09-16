@@ -39,8 +39,8 @@ def preprocess_prices(df, threshold=0.3):
 
         if curr > prev * (1 + threshold) or curr < prev * (1 - threshold):
             ratio = curr / prev
-            st.warning(f"⚠️ 가격 보정 발생: {df.loc[i,'날짜'].date()} "
-                       f"(전일 {prev:.2f} → 당일 {curr:.2f}, 배율={ratio:.3f})")
+            # st.warning(f"⚠️ 가격 보정 발생: {df.loc[i,'날짜'].date()} "
+            #            f"(전일 {prev:.2f} → 당일 {curr:.2f}, 배율={ratio:.3f})")
             df.loc[:i-1, ["종가보정", "시가", "고가", "저가"]] *= ratio
 
     return df
