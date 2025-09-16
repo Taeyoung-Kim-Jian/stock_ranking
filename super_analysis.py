@@ -113,15 +113,22 @@ def analyze_target(df):
     last = results.iloc[-1]
 
     if last["목표"] == "다음T":
+        # ✅ 다음 T가 있는 경우 → 그대로 사용
         target_price = last["목표가격"]
         period = last["기간(일)"]
     else:
-        # 다음T가 없는 경우 → 최근 변동성 기반으로 예측
+        # ✅ 다음 T가 없는 경우 → 최근 변동성 기반으로 예측
         recent = df["종가보정"].tail(60)
         high, low = recent.max(), recent.min()
         volatility = (high - low) / low if low > 0 else 0.2
-        growth = max(0.1, volatility)  # 최소 10% 상승 가정
+
+        growth = max(0.1, volatility)  # 최소 10% 가정
         target_price = int(current_price * (1 + growth))
+
+        # ✅ 항상 현재가보다 높게 보정
+        if target_price <= current_price:
+            target_price = int(current_price * 1.1)  # 최소 10% 상승 보정
+
         period = int(np.mean(results["기간(일)"])) if not results["기간(일)"].empty else 30
 
     today = pd.Timestamp.today().normalize()
