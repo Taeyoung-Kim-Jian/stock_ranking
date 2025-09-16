@@ -1,109 +1,99 @@
 import streamlit as st
-import pandas as pd
 import sqlite3
-import numpy as np
-import plotly.graph_objects as go
+import pandas as pd
+from datetime import datetime
+from super_analysis import load_prices, find_bt, analyze_retests  # 기존 B/T 함수 import
 
 DB_PATH = "stock_data.db"
 
 # -----------------------------
-# DB에서 종목/데이터 불러오기
+# DB에서 종목 불러오기
 # -----------------------------
-def load_data():
+def load_symbols():
     conn = sqlite3.connect(DB_PATH)
-    # ⚠️ 실제 DB 테이블/컬럼명에 맞게 수정 필요
-    query = """
-        SELECT 종목, 상태, 현재가, 예상상승률, 예상목표가, 예상기간
-        FROM stocks
-    """
-    df = pd.read_sql(query, conn)
+    df = pd.read_sql("SELECT 종목코드, 종목명 FROM stocks", conn)
     conn.close()
-
-    # 오늘 날짜 기준 예상도달일 계산
-    base_date = pd.Timestamp.today().normalize()
-    df["예상도달일"] = base_date + pd.to_timedelta(df["예상기간"], unit="D")
     return df
 
 # -----------------------------
-# 미니차트 생성 함수
+# 목표가/예상기간 계산
 # -----------------------------
-def make_sparkline(prices, 종목명):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        y=prices,
-        mode="lines",
-        line=dict(color="blue"),
-        showlegend=False
-    ))
-    fig.update_layout(
-        margin=dict(l=0, r=0, t=20, b=0),
-        height=120,
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
-        title=dict(text=f"{종목명} 최근 흐름", x=0.5, font=dict(size=12))
-    )
-    return fig
+def analyze_target(df):
+    b_points, t_points = find_bt(df)
+    results = analyze_retests(df, b_points, t_points)
 
-# -----------------------------
-# 카드 뷰 생성
-# -----------------------------
-def render_cards(df):
-    for _, row in df.iterrows():
-        col1, col2 = st.columns([2, 3])
-        with col1:
-            st.markdown(f"""
-            <div style="padding:15px; border-radius:10px; background:#f9f9f9;
-                        margin-bottom:15px; box-shadow:2px 2px 5px rgba(0,0,0,0.1);">
-                <h4>{row['종목']} <span style="font-size:0.8em;">{row['상태']}</span></h4>
-                <p>💰 현재가: <b>{row['현재가']:,}원</b></p>
-                <p>📈 예상 수익률: <b style="color:green;">{row['예상상승률']:.1f}%</b></p>
-                <p>🎯 목표가: <b>{row['예상목표가']:,}원</b></p>
-                <p>⏳ 예상 기간: {row['예상기간']}일</p>
-                <p>📅 예상 도달일: {row['예상도달일'].date()}</p>
-            </div>
-            """, unsafe_allow_html=True)
-        with col2:
-            # ⚠️ DB에 실제 가격 이력 테이블 있으면 불러오기
-            sample_prices = np.cumsum(np.random.randn(50)) + row['현재가']
-            fig = make_sparkline(sample_prices, row['종목'])
-            st.plotly_chart(fig, use_container_width=True)
+    if results.empty:
+        return None
+
+    # 마지막 분석 결과 기준
+    last = results.iloc[-1]
+    target_price = last["목표가격"]
+    period = last["기간(일)"]
+
+    # 도달일 = 오늘 + 기간
+    today = pd.Timestamp.today().normalize()
+    target_date = today + pd.to_timedelta(period, unit="D")
+
+    current_price = df["종가보정"].iloc[-1]
+    expected_return = round((target_price - current_price) / current_price * 100, 1)
+
+    return target_price, expected_return, period, target_date.date()
 
 # -----------------------------
 # Streamlit UI
 # -----------------------------
 def main():
-    st.title("📊 TOP10 종목 리포트 (예상 수익률 & 기간)")
+    st.title("📊 TOP10 종목 리포트")
 
-    df = load_data()
+    symbols = load_symbols()
+    results = []
 
-    # 수익률 기준 TOP10
-    df_top10_rise = df.sort_values("예상상승률", ascending=False).head(10)
+    for _, row in symbols.iterrows():
+        code, name = row["종목코드"], row["종목명"]
+        df = load_prices(code)
+        if df.empty:
+            continue
 
-    # 기간 기준 TOP10
-    df_top10_period = df.sort_values("예상기간").head(10)
+        res = analyze_target(df)
+        if not res:
+            continue
 
-    # -----------------
-    # 탭 구조
-    # -----------------
-    tab1, tab2 = st.tabs(["📈 수익률 TOP10", "⏳ 기간 TOP10"])
+        target_price, exp_return, period, target_date = res
 
-    with tab1:
-        st.subheader("📈 예상 수익률 기준 TOP10")
-        styled_rise = df_top10_rise.style.background_gradient(
-            subset=["예상상승률"], cmap="Greens"
-        )
-        st.dataframe(styled_rise, use_container_width=True)
-        st.markdown("### 카드 뷰")
-        render_cards(df_top10_rise)
+        results.append({
+            "종목명": name,
+            "현재가": df["종가보정"].iloc[-1],
+            "예상목표가": target_price,
+            "예상상승률(%)": exp_return,
+            "예상기간(일)": period,
+            "예상도달일": target_date
+        })
 
-    with tab2:
-        st.subheader("⏳ 예상 기간 기준 TOP10")
-        styled_period = df_top10_period.style.background_gradient(
-            subset=["예상기간"], cmap="Blues"
-        )
-        st.dataframe(styled_period, use_container_width=True)
-        st.markdown("### 카드 뷰")
-        render_cards(df_top10_period)
+    df_result = pd.DataFrame(results)
+
+    if df_result.empty:
+        st.warning("분석 가능한 종목이 없습니다.")
+        return
+
+    # TOP10만 추출
+    df_top10 = df_result.sort_values("예상상승률(%)", ascending=False).head(10)
+
+    st.subheader("📈 예상 수익률 TOP10")
+    st.dataframe(df_top10, use_container_width=True)
+
+    # 카드 뷰 출력
+    for _, row in df_top10.iterrows():
+        st.markdown(f"""
+        <div style="padding:15px; border-radius:10px; background:#f9f9f9;
+                    margin-bottom:15px; box-shadow:2px 2px 5px rgba(0,0,0,0.1);">
+            <h4>{row['종목명']}</h4>
+            <p>💰 현재가: <b>{row['현재가']:,}원</b></p>
+            <p>📈 예상 수익률: <b style="color:green;">{row['예상상승률(%)']:.1f}%</b></p>
+            <p>🎯 목표가: <b>{row['예상목표가']:,}원</b></p>
+            <p>⏳ 예상 기간: {row['예상기간(일)']}일</p>
+            <p>📅 예상 도달일: {row['예상도달일']}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
