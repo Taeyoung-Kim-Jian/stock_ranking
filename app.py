@@ -35,7 +35,7 @@ if df.empty:
 else:
     # AgGrid 옵션
     gb = GridOptionsBuilder.from_dataframe(df[["종목코드","종목명","등록일","마지막업데이트일"]])
-    gb.configure_selection("single", use_checkbox=False)  # 행 단일 선택
+    gb.configure_selection("single", use_checkbox=False)  # 단일행 선택
     grid_options = gb.build()
 
     grid_response = AgGrid(
@@ -47,10 +47,13 @@ else:
         allow_unsafe_jscode=True,
     )
 
+    # 항상 리스트로 변환
     selected = grid_response["selected_rows"]
+    if isinstance(selected, pd.DataFrame):
+        selected = selected.to_dict(orient="records")
 
     # 행 클릭 시 팝업 띄우기
-    if selected:
+    if selected and len(selected) > 0:
         stock = selected[0]
         with st.modal(f"📈 {stock['종목명']} ({stock['종목코드']}) 상세보기"):
             st.write(f"종목코드: {stock['종목코드']}")
