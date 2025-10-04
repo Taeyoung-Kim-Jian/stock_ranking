@@ -37,7 +37,7 @@ if not code:
     st.warning("❌ 종목 코드가 없습니다. 메인 페이지에서 선택하세요.")
     st.stop()
 
-title_text = f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기"
+title_text = f"📈 {name} ({code}) 상세보기"
 st.title(title_text)
 
 price_df = load_prices(code)
