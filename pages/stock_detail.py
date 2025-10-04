@@ -3,16 +3,22 @@ import pandas as pd
 from supabase import create_client
 import plotly.graph_objects as go
 
+# -------------------------------
+# Supabase 연결
+# -------------------------------
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# -------------------------------
+# 데이터 불러오기
+# -------------------------------
 def load_prices(code):
     res = (
         supabase.table("prices")
         .select("*")
         .eq("종목코드", code)
-        .range(0, 5000)   # 충분히 큰 범위 지정
+        .range(0, 5000)
         .execute()
     )
     df = pd.DataFrame(res.data)
@@ -27,25 +33,27 @@ def load_detected_stock(code):
         return res.data[0]
     return None
 
-st.set_page_config(page_title="Stock Detail", layout="wide")
+# -------------------------------
+# UI 기본 설정
+# -------------------------------
+st.set_page_config(page_title="Stock Detail", layout="centered")  # 📌 모바일에서 중앙 정렬
 
 # ✅ 세션 상태에서 종목코드 불러오기
 code = st.session_state.get("selected_code", None)
+name = st.session_state.get("selected_name", None)
 
 if not code:
     st.warning("❌ 종목 코드가 없습니다. 메인 페이지에서 선택하세요.")
     st.stop()
 
-# ✅ 가격 데이터 불러오기
+title_text = f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기"
+st.title(title_text)
+
+# -------------------------------
+# 가격 데이터 불러오기
+# -------------------------------
 price_df = load_prices(code)
 if not price_df.empty:
-    # 종목명 / 코드 가져오기
-    stock_name = price_df["종목명"].iloc[0] if "종목명" in price_df.columns else ""
-    stock_code = price_df["종목코드"].iloc[0] if "종목코드" in price_df.columns else code
-
-    # 제목 표시
-    st.title(f"📈 {stock_name} ({stock_code}) 상세보기")
-
     detected = load_detected_stock(code)
 
     fig = go.Figure(data=[
@@ -55,11 +63,11 @@ if not price_df.empty:
             high=price_df["고가"],
             low=price_df["저가"],
             close=price_df["종가"],
-            name=f"{stock_name} ({stock_code})"
+            name="가격"
         )
     ])
 
-    # 기준가 라인 표시
+    # 기준가 라인 추가
     if detected:
         for i in [1, 2, 3]:
             key = f"{i}차_기준가"
@@ -76,14 +84,32 @@ if not price_df.empty:
                 except ValueError:
                     pass
 
+    # 📌 차트 레이아웃 (모바일 최적화)
     fig.update_layout(
         autosize=True,
         xaxis_rangeslider_visible=False,
-        height=900,
+        height=500,  # 고정 900 → 500 으로 축소
         margin=dict(l=10, r=10, t=40, b=40),
         template="plotly_white"
     )
+
+    # 📌 모바일 전용 CSS (가로폭 768px 이하일 때 높이 400px 제한)
+    st.markdown("""
+        <style>
+        @media (max-width: 768px) {
+            .plotly-graph-div {
+                height: 400px !important;
+            }
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # 📊 차트 표시
     st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
+
+    # 📑 데이터 테이블
+    st.subheader("📊 원본 데이터")
+    st.dataframe(price_df, use_container_width=True)
 
 else:
     st.info("⚠️ 가격 데이터가 없습니다.")
