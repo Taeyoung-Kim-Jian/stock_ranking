@@ -20,9 +20,17 @@ def load_stocks():
     return pd.DataFrame(res.data)
 
 def load_prices(code):
-    """prices 테이블에서 특정 종목의 일별 가격 불러오기"""
-    res = supabase.table("prices").select("*").eq("종목코드", code).order("날짜").execute()
+    """prices 테이블에서 특정 종목의 일별 가격 불러오기 (최대 5000개까지)"""
+    res = (
+        supabase.table("prices")
+        .select("*")
+        .eq("종목코드", code)
+        .order("날짜")
+        .limit(5000)   # ★ 충분히 크게 설정
+        .execute()
+    )
     return pd.DataFrame(res.data)
+
 
 def load_detected_stock(code: str):
     """detected_stocks 테이블에서 기준가 불러오기"""
@@ -151,3 +159,4 @@ if sel_code and st.session_state.open_code != sel_code:
             st.write(f"**마지막 업데이트**: {stock.get('마지막업데이트일')}")
 
     show_detail()
+
