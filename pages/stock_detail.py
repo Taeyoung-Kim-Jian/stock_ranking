@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 import plotly.graph_objects as go
-import streamlit.components.v1 as components
+from streamlit_js_eval import streamlit_js_eval   # ✅ 화면 폭 감지용
 
 # -------------------------------
 # Supabase 연결
@@ -43,6 +43,7 @@ def load_prices(code):
     return df
 
 def load_detected_stock(code):
+    """기준가 테이블에서 특정 종목 불러오기"""
     res = supabase.table("detected_stocks").select("*").eq("종목코드", code).execute()
     if res.data:
         return res.data[0]
@@ -53,6 +54,7 @@ def load_detected_stock(code):
 # -------------------------------
 st.set_page_config(page_title="Stock Detail", layout="wide")
 
+# ✅ 세션 상태에서 종목코드/종목명 불러오기
 code = st.session_state.get("selected_code", None)
 name = st.session_state.get("selected_name", None)
 
@@ -63,22 +65,10 @@ if not code:
 st.title(f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기")
 
 # -------------------------------
-# 모바일/PC 구분 (JS로 width 가져오기)
+# 모바일/PC 구분 (화면 width로 감지)
 # -------------------------------
-if "is_mobile" not in st.session_state:
-    width = components.html(
-        """
-        <script>
-        const width = window.innerWidth;
-        const streamlit = window.parentStreamlit || window.streamlit;
-        streamlit.setComponentValue(width);
-        </script>
-        """,
-        height=0,
-    )
-    st.session_state.is_mobile = (width and width < 768)
-
-is_mobile = st.session_state.get("is_mobile", False)
+screen_width = streamlit_js_eval(js_expressions="window.innerWidth", key="SCR")
+is_mobile = screen_width is not None and screen_width < 768
 
 # -------------------------------
 # 가격 데이터 로드 및 차트
@@ -88,6 +78,7 @@ price_df = load_prices(code)
 if not price_df.empty:
     detected = load_detected_stock(code)
 
+    # ✅ 캔들차트
     fig = go.Figure(data=[
         go.Candlestick(
             x=price_df["날짜"],
@@ -99,7 +90,7 @@ if not price_df.empty:
         )
     ])
 
-    # 기준가 라인 표시
+    # ✅ 기준가 라인 표시
     if detected:
         for i in [1, 2, 3]:
             key = f"{i}차_기준가"
@@ -116,6 +107,7 @@ if not price_df.empty:
                 except ValueError:
                     pass
 
+    # ✅ 차트 레이아웃
     fig.update_layout(
         autosize=True,
         xaxis_rangeslider_visible=False,
@@ -130,6 +122,7 @@ if not price_df.empty:
     else:
         st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
 
+    # 데이터 테이블
     st.subheader("📊 원본 데이터 (2000일치)")
     st.dataframe(price_df, use_container_width=True)
 
