@@ -47,7 +47,21 @@ if not code:
     st.stop()
 
 title_text = f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기"
-st.title(title_text)
+
+# 📌 제목 스타일 (모바일에서 크기 줄이기)
+st.markdown(f"""
+    <style>
+    h1 {{
+        font-size: 2rem; /* 기본 제목 크기 */
+    }}
+    @media (max-width: 768px) {{
+        h1 {{
+            font-size: 1.3rem;  /* 모바일에서는 더 작게 */
+        }}
+    }}
+    </style>
+    <h1>{title_text}</h1>
+""", unsafe_allow_html=True)
 
 # -------------------------------
 # 가격 데이터 불러오기
@@ -56,16 +70,16 @@ price_df = load_prices(code)
 if not price_df.empty:
     detected = load_detected_stock(code)
 
-    fig = go.Figure(data=[
-        go.Candlestick(
-            x=price_df["날짜"],
-            open=price_df["시가"],
-            high=price_df["고가"],
-            low=price_df["저가"],
-            close=price_df["종가"],
-            name="가격"
-        )
-    ])
+    # 📊 선차트 생성
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=price_df["날짜"],
+        y=price_df["종가"],
+        mode="lines",
+        name="종가",
+        line=dict(color="blue")
+    ))
 
     # 기준가 라인 추가
     if detected:
@@ -84,12 +98,13 @@ if not price_df.empty:
                 except ValueError:
                     pass
 
-    # 📊 차트 레이아웃 (height 고정값 제거)
+    # 📊 레이아웃 (반응형)
     fig.update_layout(
         autosize=True,
-        xaxis_rangeslider_visible=False,
         margin=dict(l=10, r=10, t=40, b=40),
-        template="plotly_white"
+        template="plotly_white",
+        yaxis_title="가격 (원)",
+        xaxis_title="날짜"
     )
 
     # 📌 CSS 반응형 높이
