@@ -28,15 +28,13 @@ if df.empty:
     st.warning("⚠️ Supabase의 stocks 테이블에 데이터가 없습니다.")
     st.stop()
 
-# ✅ 종목명 + 코드 합치기
-df["종목"] = df["종목명"] + " (" + df["종목코드"] + ")"
 
 # ✅ 상세보기 컬럼 (단순 텍스트)
 df["상세보기"] = "👉 상세보기"
 
 # ✅ GridOptions 생성
 gb = GridOptionsBuilder.from_dataframe(
-    df[["종목코드","종목","등록일","마지막업데이트일","상세보기"]]
+    df[["종목코드","종목명","등록일","마지막업데이트일","상세보기"]]
 )
 gb.configure_selection("single", use_checkbox=False)  # 단일행 클릭 선택
 grid_options = gb.build()
@@ -68,3 +66,4 @@ if selected and len(selected) > 0:
 
     st.success(f"👉 {name} ({code}) 상세 페이지로 이동합니다...")
     st.switch_page("pages/stock_detail.py")
+
