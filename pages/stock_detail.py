@@ -60,7 +60,7 @@ name = st.session_state.get("selected_name", None)
 
 if not code:
     st.warning("❌ 종목 코드가 없습니다. 메인 페이지에서 선택하세요.")
-    st.switch_page("Swing.py")
+    st.switch_page("스윙 종목.py")
 
 st.subheader(f"📈 {name} ({code})")
 
