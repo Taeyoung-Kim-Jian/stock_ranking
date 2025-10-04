@@ -31,7 +31,7 @@ if df.empty:
 # ✅ 종목명 + 코드 합치기
 df["종목"] = df["종목명"] + " (" + df["종목코드"] + ")"
 
-# ✅ 상세보기 버튼을 위한 컬럼 추가
+# ✅ 상세보기 버튼 컬럼 추가
 df["상세보기"] = ""
 
 # ✅ 버튼 렌더러 정의 (JS)
@@ -46,7 +46,7 @@ gb = GridOptionsBuilder.from_dataframe(
     df[["종목코드","종목","등록일","마지막업데이트일","상세보기"]]
 )
 gb.configure_column("상세보기", cellRenderer=cell_renderer, width=120)
-gb.configure_selection("single", use_checkbox=False)  # 행 클릭 감지
+gb.configure_selection("single", use_checkbox=False)  # 버튼 클릭 시 행 선택
 
 grid_options = gb.build()
 
@@ -61,10 +61,12 @@ grid_response = AgGrid(
     height=600,
 )
 
-# ✅ 선택된 행 가져오기
+# ✅ 선택된 행 가져오기 (항상 리스트로 변환)
 selected = grid_response["selected_rows"]
+if isinstance(selected, pd.DataFrame):
+    selected = selected.to_dict(orient="records")
 
-if selected:
+if selected and len(selected) > 0:
     stock = selected[0]
     code = stock["종목코드"]
     name = stock["종목명"]
