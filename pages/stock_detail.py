@@ -36,9 +36,9 @@ def load_detected_stock(code):
 # -------------------------------
 # UI 기본 설정
 # -------------------------------
-st.set_page_config(page_title="Stock Detail", layout="centered")  # 📌 모바일에서 중앙 정렬
+st.set_page_config(page_title="Stock Detail", layout="centered")
 
-# ✅ 세션 상태에서 종목코드 불러오기
+# ✅ 세션 상태에서 종목코드/이름 불러오기
 code = st.session_state.get("selected_code", None)
 name = st.session_state.get("selected_name", None)
 
@@ -84,27 +84,29 @@ if not price_df.empty:
                 except ValueError:
                     pass
 
-    # 📌 차트 레이아웃 (모바일 최적화)
+    # 📊 차트 레이아웃 (height 고정값 제거)
     fig.update_layout(
         autosize=True,
         xaxis_rangeslider_visible=False,
-        height=500,  # 고정 900 → 500 으로 축소
         margin=dict(l=10, r=10, t=40, b=40),
         template="plotly_white"
     )
 
-    # 📌 모바일 전용 CSS (가로폭 768px 이하일 때 높이 400px 제한)
+    # 📌 CSS 반응형 높이
     st.markdown("""
         <style>
+        .plotly-graph-div {
+            height: 60vh !important;   /* PC: 화면 높이의 60% */
+        }
         @media (max-width: 768px) {
             .plotly-graph-div {
-                height: 400px !important;
+                height: 40vh !important;  /* 모바일: 화면 높이의 40% */
             }
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # 📊 차트 표시
+    # 📊 차트 출력
     st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
 
     # 📑 데이터 테이블
