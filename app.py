@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # -------------------------------
 # Supabase 연결
@@ -28,35 +27,17 @@ if df.empty:
     st.warning("⚠️ Supabase의 stocks 테이블에 데이터가 없습니다.")
     st.stop()
 
-# ✅ 테이블에서 보여줄 컬럼만 선택
-cols = ["종목코드", "종목명", "등록일", "마지막업데이트일"]
+# ✅ 표 + 상세보기 버튼
+for _, row in df.iterrows():
+    code = row["종목코드"]
+    name = row["종목명"]
 
-# AgGrid 설정
-gb = GridOptionsBuilder.from_dataframe(df[cols])
-gb.configure_selection("single", use_checkbox=True)  # 단일 행 선택
-grid_options = gb.build()
+    col1, col2, col3, col4, col5 = st.columns([2, 3, 3, 3, 2])
+    col1.write(code)
+    col2.write(name)
+    col3.write(row.get("등록일", ""))
+    col4.write(row.get("마지막업데이트일", ""))
 
-grid_response = AgGrid(
-    df[cols],
-    gridOptions=grid_options,
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-    theme="streamlit",
-    height=420,
-    allow_unsafe_jscode=True,
-)
-
-# -------------------------------
-# 선택된 종목 처리
-# -------------------------------
-selected = grid_response["selected_rows"]
-
-# ✅ 항상 리스트로 변환
-if isinstance(selected, pd.DataFrame):
-    selected = selected.to_dict(orient="records")
-
-# ✅ 리스트 길이 체크 후 상세 페이지 링크 제공
-if selected and len(selected) > 0:
-    stock = selected[0]
-    code = stock["종목코드"]
-    name = stock["종목명"]
-    st.markdown(f"👉 [{name} ({code}) 상세보기](stock_detail?code={code})")
+    # 상세보기 버튼 → stock_detail 페이지로 이동
+    if col5.button("상세보기", key=f"btn_{code}"):
+        st.switch_page(f"pages/stock_detail.py?code={code}")
