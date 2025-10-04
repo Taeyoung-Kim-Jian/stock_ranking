@@ -20,7 +20,7 @@ def load_detected_stock(code):
 
 st.set_page_config(page_title="Stock Detail", layout="wide")
 
-# URL 파라미터에서 종목코드 읽기
+# ✅ URL query parameter에서 종목코드 읽기
 query_params = st.query_params
 code = query_params.get("code", [None])[0]
 
@@ -49,7 +49,7 @@ if not price_df.empty:
         )
     ])
 
-    # ✅ 기준가 표시
+    # 기준가 라인 표시
     if detected:
         for i in [1, 2, 3]:
             key = f"{i}차_기준가"
