@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 import plotly.graph_objects as go
-from streamlit_js_eval import streamlit_js_eval   # ✅ 모바일 감지용
 
 # -------------------------------
 # Supabase 연결
@@ -50,12 +49,6 @@ if not code:
 st.title(f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기")
 
 # -------------------------------
-# 모바일/PC 감지
-# -------------------------------
-screen_width = streamlit_js_eval(js_expressions="window.innerWidth", key="SCR")
-is_mobile = screen_width and screen_width < 768  # 768px 이하 → 모바일로 간주
-
-# -------------------------------
 # 가격 데이터 로드 및 차트
 # -------------------------------
 price_df = load_prices(code)
@@ -95,17 +88,22 @@ if not price_df.empty:
     fig.update_layout(
         autosize=True,
         xaxis_rangeslider_visible=False,
-        height=700 if not is_mobile else 500,
+        height=700,
         margin=dict(l=10, r=10, t=40, b=40),
-        template="plotly_white"
+        template="plotly_white",
+        dragmode=False  # ❌ 드래그 이동 방지
     )
 
-    # ✅ 모바일 → 고정(static), PC → 인터랙티브
-    if is_mobile:
-        st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
-    else:
-        st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
+    # ✅ PC: 마우스 휠 줌 / 모바일: 핀치 줌 허용
+    config = {
+        "scrollZoom": True,       # 마우스 휠 / 모바일 핀치 줌 허용
+        "displayModeBar": False,  # 툴바 숨김
+        "doubleClick": "reset"    # 더블클릭 시 리셋
+    }
 
+    st.plotly_chart(fig, use_container_width=True, config=config)
+
+    # 원본 데이터 테이블
     st.subheader("📊 원본 데이터")
     st.dataframe(price_df, use_container_width=True)
 
