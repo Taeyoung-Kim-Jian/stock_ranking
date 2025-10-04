@@ -12,7 +12,7 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -------------------------------
-# 데이터 불러오기 함수
+# 데이터 불러오기
 # -------------------------------
 def load_stocks():
     """stocks 테이블 전체 불러오기"""
@@ -20,15 +20,8 @@ def load_stocks():
     return pd.DataFrame(res.data)
 
 def load_prices(code):
-    """prices 테이블에서 특정 종목의 일별 가격 불러오기 (최대 5000개)"""
-    res = (
-        supabase.table("prices")
-        .select("*")
-        .eq("종목코드", code)
-        .order("날짜")
-        .limit(5000)
-        .execute()
-    )
+    """prices 테이블에서 특정 종목의 일별 가격 불러오기"""
+    res = supabase.table("prices").select("*").eq("종목코드", code).order("날짜").execute()
     return pd.DataFrame(res.data)
 
 def load_detected_stock(code: str):
@@ -91,11 +84,15 @@ st.markdown("""
         height: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
-        padding: 1rem !important;
+        padding: 0 !important;
         z-index: 9999 !important;
+        background-color: white !important;
     }
-    [data-testid="stDialog"] > div:nth-child(1) {
+    [data-testid="stDialog"] > div {
         height: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 1rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -110,7 +107,7 @@ if sel_code and st.session_state.open_code != sel_code:
 
     @st.dialog(f"📈 {stock['종목명']} ({stock['종목코드']}) 상세보기")
     def show_detail():
-        # 상단: 캔들차트
+        # 상단 차트
         st.subheader("📊 캔들차트 (기준가 포함)")
         price_df = load_prices(stock["종목코드"])
         if not price_df.empty:
@@ -149,15 +146,15 @@ if sel_code and st.session_state.open_code != sel_code:
 
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
-                xaxis=dict(range=[price_df["날짜"].min(), price_df["날짜"].max()]),
-                height=700,
+                height=900,  # 크게 키움
+                margin=dict(l=20, r=20, t=40, b=40),
                 template="plotly_white"
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("가격 데이터가 없습니다.")
 
-        # 하단: 종목 정보
+        # 하단 종목 정보
         st.subheader("ℹ️ 종목 정보")
         st.write(f"**종목코드**: {stock['종목코드']}")
         st.write(f"**종목명**: {stock['종목명']}")
