@@ -18,6 +18,7 @@ def load_prices(code):
         supabase.table("prices")
         .select("*")
         .eq("종목코드", code)
+        .order("날짜")
         .range(0, 5000)
         .execute()
     )
@@ -34,11 +35,11 @@ def load_detected_stock(code):
     return None
 
 # -------------------------------
-# UI 기본 설정
+# Streamlit UI
 # -------------------------------
-st.set_page_config(page_title="Stock Detail", layout="centered")
+st.set_page_config(page_title="Stock Detail", layout="wide")
 
-# ✅ 세션 상태에서 종목코드/이름 불러오기
+# ✅ 세션 상태에서 종목코드 불러오기
 code = st.session_state.get("selected_code", None)
 name = st.session_state.get("selected_name", None)
 
@@ -47,41 +48,29 @@ if not code:
     st.stop()
 
 title_text = f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기"
-
-# 📌 제목 스타일 (모바일에서 크기 줄이기)
-st.markdown(f"""
-    <style>
-    h1 {{
-        font-size: 2rem; /* 기본 제목 크기 */
-    }}
-    @media (max-width: 768px) {{
-        h1 {{
-            font-size: 1.3rem;  /* 모바일에서는 더 작게 */
-        }}
-    }}
-    </style>
-    <h1>{title_text}</h1>
-""", unsafe_allow_html=True)
+st.title(title_text)
 
 # -------------------------------
-# 가격 데이터 불러오기
+# 차트 + 데이터 표시
 # -------------------------------
 price_df = load_prices(code)
+
 if not price_df.empty:
     detected = load_detected_stock(code)
 
-    # 📊 선차트 생성
+    # ✅ 선차트로 변환
     fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=price_df["날짜"],
+            y=price_df["종가"],
+            mode="lines",
+            name="종가",
+            line=dict(color="blue")
+        )
+    )
 
-    fig.add_trace(go.Scatter(
-        x=price_df["날짜"],
-        y=price_df["종가"],
-        mode="lines",
-        name="종가",
-        line=dict(color="blue")
-    ))
-
-    # 기준가 라인 추가
+    # ✅ 기준가 라인 추가
     if detected:
         for i in [1, 2, 3]:
             key = f"{i}차_기준가"
@@ -98,33 +87,19 @@ if not price_df.empty:
                 except ValueError:
                     pass
 
-    # 📊 레이아웃 (반응형)
     fig.update_layout(
         autosize=True,
+        height=600,
         margin=dict(l=10, r=10, t=40, b=40),
         template="plotly_white",
-        yaxis_title="가격 (원)",
-        xaxis_title="날짜"
+        xaxis_title="날짜",
+        yaxis_title="가격 (원)"
     )
 
-    # 📌 CSS 반응형 높이
-    st.markdown("""
-        <style>
-        .plotly-graph-div {
-            height: 60vh !important;   /* PC: 화면 높이의 60% */
-        }
-        @media (max-width: 768px) {
-            .plotly-graph-div {
-                height: 40vh !important;  /* 모바일: 화면 높이의 40% */
-            }
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # ✅ 모바일에서 줌/드래그 비활성화 (고정 모드)
+    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
 
-    # 📊 차트 출력
-    st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
-
-    # 📑 데이터 테이블
+    # 원본 데이터 테이블
     st.subheader("📊 원본 데이터")
     st.dataframe(price_df, use_container_width=True)
 
