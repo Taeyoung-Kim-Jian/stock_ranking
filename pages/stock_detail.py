@@ -3,7 +3,6 @@ import pandas as pd
 from supabase import create_client
 import plotly.graph_objects as go
 
-# Supabase 연결
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -20,17 +19,15 @@ def load_detected_stock(code):
 
 st.set_page_config(page_title="Stock Detail", layout="wide")
 
-# ✅ URL query parameter에서 종목코드 읽기
-query_params = st.query_params
-code = query_params.get("code", [None])[0]
+# ✅ 세션 상태에서 종목코드 불러오기
+code = st.session_state.get("selected_code", None)
 
 if not code:
-    st.warning("❌ 종목 코드가 없습니다.")
+    st.warning("❌ 종목 코드가 없습니다. 메인 페이지에서 선택하세요.")
     st.stop()
 
 st.title(f"📈 {code} 상세보기")
 
-# 가격 데이터 로드
 price_df = load_prices(code)
 if not price_df.empty:
     price_df["날짜"] = pd.to_datetime(price_df["날짜"], errors="coerce")
@@ -49,7 +46,6 @@ if not price_df.empty:
         )
     ])
 
-    # 기준가 라인 표시
     if detected:
         for i in [1, 2, 3]:
             key = f"{i}차_기준가"
