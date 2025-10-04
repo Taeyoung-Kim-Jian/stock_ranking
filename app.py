@@ -32,7 +32,7 @@ def load_detected_stock(code: str):
 # UI 시작
 # -------------------------------
 st.set_page_config(page_title="Stocks Dashboard", layout="wide", initial_sidebar_state="collapsed")
-st.title("📊 종목 리스트")
+st.title("📊 종목 리스트1")
 
 # ✅ CSS (풀스크린 모달 + 차트 100% 확장)
 st.markdown("""
@@ -187,3 +187,4 @@ if sel_code and st.session_state.open_code != sel_code:
         st.markdown('</div>', unsafe_allow_html=True)
 
     show_detail()
+
