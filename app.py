@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # -------------------------------
 # Supabase 연결
@@ -31,37 +31,28 @@ if df.empty:
 # ✅ 종목명 + 코드 합치기
 df["종목"] = df["종목명"] + " (" + df["종목코드"] + ")"
 
-# ✅ 상세보기 버튼 컬럼 추가
-df["상세보기"] = ""
-
-# ✅ 버튼 렌더러 정의 (JS)
-cell_renderer = JsCode("""
-function(params) {
-    return '<button style="padding:5px 10px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer;">상세보기</button>'
-}
-""")
+# ✅ 상세보기 컬럼 (단순 텍스트)
+df["상세보기"] = "👉 상세보기"
 
 # ✅ GridOptions 생성
 gb = GridOptionsBuilder.from_dataframe(
     df[["종목코드","종목","등록일","마지막업데이트일","상세보기"]]
 )
-gb.configure_column("상세보기", cellRenderer=cell_renderer, width=120)
-gb.configure_selection("single", use_checkbox=False)  # 버튼 클릭 시 행 선택
-
+gb.configure_selection("single", use_checkbox=False)  # 단일행 클릭 선택
 grid_options = gb.build()
 
 # ✅ AgGrid 렌더링
 grid_response = AgGrid(
     df,
     gridOptions=grid_options,
-    update_mode="MODEL_CHANGED",
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
     fit_columns_on_grid_load=True,
     theme="streamlit",
     allow_unsafe_jscode=True,
     height=600,
 )
 
-# ✅ 선택된 행 가져오기 (항상 리스트로 변환)
+# ✅ 선택된 행 가져오기 (리스트 변환 보장)
 selected = grid_response["selected_rows"]
 if isinstance(selected, pd.DataFrame):
     selected = selected.to_dict(orient="records")
