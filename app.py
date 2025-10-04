@@ -34,7 +34,7 @@ def load_detected_stock(code: str):
 st.set_page_config(page_title="Stocks Dashboard", layout="wide", initial_sidebar_state="collapsed")
 st.title("📊 종목 리스트")
 
-# ✅ CSS (풀스크린 모달 + 차트 100% 중앙정렬)
+# ✅ CSS (풀스크린 모달 + 차트 100% 확장)
 st.markdown("""
     <style>
     [data-testid="stDialog"] {
@@ -60,21 +60,21 @@ st.markdown("""
         flex-direction: column !important;
     }
     .block-container {
-        max-width: 100% !important;
-        padding-left: 0rem !important;
-        padding-right: 0rem !important;
+        max-width: 100% !important;   /* 기본 중앙 제한 제거 */
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
     .stPlotlyChart {
-        width: 100% !important;
+        width: 100% !important;       /* 브라우저 전체 폭 */
         height: 100% !important;
-        margin: auto !important;
+        margin: 0 auto !important;
     }
     .chart-container {
-        flex: 9;   /* 화면 90% */
+        flex: 9;
         width: 100%;
     }
     .info-container {
-        flex: 1;   /* 화면 10% */
+        flex: 1;
         width: 100%;
         padding: 1rem;
         background: #fafafa;
@@ -145,7 +145,7 @@ if sel_code and st.session_state.open_code != sel_code:
                 )
             ])
 
-            # 기준가 라인
+            # 기준가 라인 표시
             if detected:
                 for i in [1, 2, 3]:
                     key = f"{i}차_기준가"
@@ -163,9 +163,9 @@ if sel_code and st.session_state.open_code != sel_code:
                             pass
 
             fig.update_layout(
-                autosize=True,
+                autosize=True,                # ✅ 브라우저 폭 자동 맞춤
                 xaxis_rangeslider_visible=False,
-                height=900,  # 크게
+                height=900,                   # 세로만 크게 고정
                 margin=dict(l=10, r=10, t=40, b=40),
                 template="plotly_white"
             )
