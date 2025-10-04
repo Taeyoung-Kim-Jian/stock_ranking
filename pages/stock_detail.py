@@ -21,7 +21,6 @@ def load_prices(code):
         df = df.dropna(subset=["날짜"]).sort_values("날짜")
     return df
 
-
 def load_detected_stock(code):
     res = supabase.table("detected_stocks").select("*").eq("종목코드", code).execute()
     if res.data:
@@ -37,13 +36,15 @@ if not code:
     st.warning("❌ 종목 코드가 없습니다. 메인 페이지에서 선택하세요.")
     st.stop()
 
-title_text = f"📈 {name} ({code}) 상세보기"
-st.title(title_text)
-
+# ✅ 가격 데이터 불러오기
 price_df = load_prices(code)
 if not price_df.empty:
-    price_df["날짜"] = pd.to_datetime(price_df["날짜"], errors="coerce")
-    price_df = price_df.dropna(subset=["날짜"]).sort_values("날짜")
+    # 종목명 / 코드 가져오기
+    stock_name = price_df["종목명"].iloc[0] if "종목명" in price_df.columns else ""
+    stock_code = price_df["종목코드"].iloc[0] if "종목코드" in price_df.columns else code
+
+    # 제목 표시
+    st.title(f"📈 {stock_name} ({stock_code}) 상세보기")
 
     detected = load_detected_stock(code)
 
@@ -54,10 +55,11 @@ if not price_df.empty:
             high=price_df["고가"],
             low=price_df["저가"],
             close=price_df["종가"],
-            name="가격"
+            name=f"{stock_name} ({stock_code})"
         )
     ])
 
+    # 기준가 라인 표시
     if detected:
         for i in [1, 2, 3]:
             key = f"{i}차_기준가"
