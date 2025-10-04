@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 import plotly.graph_objects as go
-from streamlit_js_eval import streamlit_js_eval   # ✅ 화면 폭 감지용
+from streamlit_js_eval import streamlit_js_eval   # ✅ 모바일/PC 구분용
 
 # -------------------------------
 # Supabase 연결
@@ -65,7 +65,7 @@ if not code:
 st.title(f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기")
 
 # -------------------------------
-# 모바일/PC 구분 (화면 width로 감지)
+# 모바일/PC 구분
 # -------------------------------
 screen_width = streamlit_js_eval(js_expressions="window.innerWidth", key="SCR")
 is_mobile = screen_width is not None and screen_width < 768
@@ -107,11 +107,11 @@ if not price_df.empty:
                 except ValueError:
                     pass
 
-    # ✅ 차트 레이아웃
+    # ✅ 차트 높이: PC는 500, 모바일은 350
     fig.update_layout(
         autosize=True,
         xaxis_rangeslider_visible=False,
-        height=700,
+        height=350 if is_mobile else 500,
         margin=dict(l=10, r=10, t=40, b=40),
         template="plotly_white"
     )
