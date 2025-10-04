@@ -12,7 +12,7 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -------------------------------
-# 데이터 불러오기
+# 데이터 불러오기 함수
 # -------------------------------
 def load_stocks():
     """stocks 테이블 전체 불러오기"""
@@ -20,17 +20,16 @@ def load_stocks():
     return pd.DataFrame(res.data)
 
 def load_prices(code):
-    """prices 테이블에서 특정 종목의 일별 가격 불러오기 (최대 5000개까지)"""
+    """prices 테이블에서 특정 종목의 일별 가격 불러오기 (최대 5000개)"""
     res = (
         supabase.table("prices")
         .select("*")
         .eq("종목코드", code)
         .order("날짜")
-        .limit(5000)   # ★ 충분히 크게 설정
+        .limit(5000)
         .execute()
     )
     return pd.DataFrame(res.data)
-
 
 def load_detected_stock(code: str):
     """detected_stocks 테이블에서 기준가 불러오기"""
@@ -81,12 +80,22 @@ if isinstance(selected, pd.DataFrame):
 # 모달창 (종목 상세보기)
 # -------------------------------
 
-# 모달 크기 확장 CSS
+# 모달 풀스크린 CSS
 st.markdown("""
     <style>
     [data-testid="stDialog"] {
-        width: 90% !important;
-        max-width: 90% !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 1rem !important;
+        z-index: 9999 !important;
+    }
+    [data-testid="stDialog"] > div:nth-child(1) {
+        height: 100% !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -101,62 +110,58 @@ if sel_code and st.session_state.open_code != sel_code:
 
     @st.dialog(f"📈 {stock['종목명']} ({stock['종목코드']}) 상세보기")
     def show_detail():
-        col1, col2 = st.columns([2, 1])
+        # 상단: 캔들차트
+        st.subheader("📊 캔들차트 (기준가 포함)")
+        price_df = load_prices(stock["종목코드"])
+        if not price_df.empty:
+            price_df["날짜"] = pd.to_datetime(price_df["날짜"], errors="coerce")
+            price_df = price_df.dropna(subset=["날짜"]).sort_values("날짜")
 
-        # 왼쪽: 캔들차트
-        with col1:
-            st.subheader("📊 캔들차트 (기준가 포함)")
-            price_df = load_prices(stock["종목코드"])
-            if not price_df.empty:
-                price_df["날짜"] = pd.to_datetime(price_df["날짜"])
-                price_df = price_df.sort_values("날짜")
+            detected = load_detected_stock(stock["종목코드"])
 
-                detected = load_detected_stock(stock["종목코드"])
-
-                fig = go.Figure(data=[
-                    go.Candlestick(
-                        x=price_df["날짜"],
-                        open=price_df["시가"],
-                        high=price_df["고가"],
-                        low=price_df["저가"],
-                        close=price_df["종가"],
-                        name="가격"
-                    )
-                ])
-
-                # 기준가 라인 표시
-                if detected:
-                    for i in [1, 2, 3]:
-                        key = f"{i}차_기준가"
-                        if key in detected and detected[key] is not None:
-                            try:
-                                기준가 = float(detected[key])
-                                fig.add_hline(
-                                    y=기준가,
-                                    line_dash="dot",
-                                    line_color="red" if i == 1 else ("blue" if i == 2 else "green"),
-                                    annotation_text=f"{i}차 기준가 {기준가}",
-                                    annotation_position="top left"
-                                )
-                            except ValueError:
-                                pass  # 변환 불가능하면 무시
-
-                fig.update_layout(
-                    xaxis_rangeslider_visible=False,
-                    height=600,
-                    template="plotly_white"
+            fig = go.Figure(data=[
+                go.Candlestick(
+                    x=price_df["날짜"],
+                    open=price_df["시가"],
+                    high=price_df["고가"],
+                    low=price_df["저가"],
+                    close=price_df["종가"],
+                    name="가격"
                 )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("가격 데이터가 없습니다.")
+            ])
 
-        # 오른쪽: 종목 정보
-        with col2:
-            st.subheader("ℹ️ 종목 정보")
-            st.write(f"**종목코드**: {stock['종목코드']}")
-            st.write(f"**종목명**: {stock['종목명']}")
-            st.write(f"**등록일**: {stock.get('등록일')}")
-            st.write(f"**마지막 업데이트**: {stock.get('마지막업데이트일')}")
+            # 기준가 라인 표시
+            if detected:
+                for i in [1, 2, 3]:
+                    key = f"{i}차_기준가"
+                    if key in detected and detected[key] is not None:
+                        try:
+                            기준가 = float(detected[key])
+                            fig.add_hline(
+                                y=기준가,
+                                line_dash="dot",
+                                line_color="red" if i == 1 else ("blue" if i == 2 else "green"),
+                                annotation_text=f"{i}차 기준가 {기준가}",
+                                annotation_position="top left"
+                            )
+                        except ValueError:
+                            pass
+
+            fig.update_layout(
+                xaxis_rangeslider_visible=False,
+                xaxis=dict(range=[price_df["날짜"].min(), price_df["날짜"].max()]),
+                height=700,
+                template="plotly_white"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("가격 데이터가 없습니다.")
+
+        # 하단: 종목 정보
+        st.subheader("ℹ️ 종목 정보")
+        st.write(f"**종목코드**: {stock['종목코드']}")
+        st.write(f"**종목명**: {stock['종목명']}")
+        st.write(f"**등록일**: {stock.get('등록일')}")
+        st.write(f"**마지막 업데이트**: {stock.get('마지막업데이트일')}")
 
     show_detail()
-
