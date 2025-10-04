@@ -34,13 +34,15 @@ def load_detected_stock(code: str):
 st.set_page_config(page_title="Stocks Dashboard", layout="wide", initial_sidebar_state="collapsed")
 st.title("📊 종목 리스트")
 
-# ✅ CSS (UI 코드 안에서 넣기)
+# ✅ 풀스크린 모달 CSS
 st.markdown("""
     <style>
     [data-testid="stDialog"] {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
         width: 100% !important;
         height: 100% !important;
         max-width: 100% !important;
@@ -48,14 +50,26 @@ st.markdown("""
         padding: 0 !important;
         z-index: 9999 !important;
         background-color: white !important;
+        border-radius: 0 !important;
     }
     [data-testid="stDialog"] > div {
-        display: flex !important;
-        flex-direction: column !important;
         height: 100% !important;
         width: 100% !important;
         margin: 0 !important;
-        padding: 1rem !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    .chart-container {
+        flex: 9;   /* 화면 90% */
+        width: 100%;
+    }
+    .info-container {
+        flex: 1;   /* 화면 10% */
+        width: 100%;
+        padding: 1rem;
+        background: #fafafa;
+        border-top: 1px solid #ddd;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -99,8 +113,11 @@ if sel_code and st.session_state.open_code != sel_code:
 
     @st.dialog(f"📈 {stock['종목명']} ({stock['종목코드']}) 상세보기")
     def show_detail():
-        # 상단 차트
-        st.subheader("📊 캔들차트 (기준가 포함)")
+        # -------------------------------
+        # 상단 차트 (90%)
+        # -------------------------------
+        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+
         price_df = load_prices(stock["종목코드"])
         if not price_df.empty:
             price_df["날짜"] = pd.to_datetime(price_df["날짜"], errors="coerce")
@@ -119,7 +136,7 @@ if sel_code and st.session_state.open_code != sel_code:
                 )
             ])
 
-            # 기준가 라인 표시
+            # 기준가 라인
             if detected:
                 for i in [1, 2, 3]:
                     key = f"{i}차_기준가"
@@ -138,7 +155,7 @@ if sel_code and st.session_state.open_code != sel_code:
 
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
-                height=900,
+                height=750,  # 차트 세로 크게
                 margin=dict(l=20, r=20, t=40, b=40),
                 template="plotly_white"
             )
@@ -146,11 +163,17 @@ if sel_code and st.session_state.open_code != sel_code:
         else:
             st.info("가격 데이터가 없습니다.")
 
-        # 하단 종목 정보
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # -------------------------------
+        # 하단 종목 정보 (10%)
+        # -------------------------------
+        st.markdown('<div class="info-container">', unsafe_allow_html=True)
         st.subheader("ℹ️ 종목 정보")
         st.write(f"**종목코드**: {stock['종목코드']}")
         st.write(f"**종목명**: {stock['종목명']}")
         st.write(f"**등록일**: {stock.get('등록일')}")
         st.write(f"**마지막 업데이트**: {stock.get('마지막업데이트일')}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     show_detail()
