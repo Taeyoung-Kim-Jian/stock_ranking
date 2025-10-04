@@ -8,8 +8,19 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def load_prices(code):
-    res = supabase.table("prices").select("*").eq("종목코드", code).order("날짜").execute()
-    return pd.DataFrame(res.data)
+    res = (
+        supabase.table("prices")
+        .select("*")
+        .eq("종목코드", code)
+        .range(0, 5000)   # 충분히 큰 범위 지정
+        .execute()
+    )
+    df = pd.DataFrame(res.data)
+    if not df.empty:
+        df["날짜"] = pd.to_datetime(df["날짜"], errors="coerce")
+        df = df.dropna(subset=["날짜"]).sort_values("날짜")
+    return df
+
 
 def load_detected_stock(code):
     res = supabase.table("detected_stocks").select("*").eq("종목코드", code).execute()
