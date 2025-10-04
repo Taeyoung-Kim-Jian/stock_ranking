@@ -34,7 +34,7 @@ def load_detected_stock(code: str):
 st.set_page_config(page_title="Stocks Dashboard", layout="wide", initial_sidebar_state="collapsed")
 st.title("📊 종목 리스트")
 
-# ✅ 풀스크린 모달 CSS
+# ✅ 풀스크린 모달 + 차트 중앙정렬 CSS
 st.markdown("""
     <style>
     [data-testid="stDialog"] {
@@ -45,7 +45,6 @@ st.markdown("""
         bottom: 0 !important;
         width: 100% !important;
         height: 100% !important;
-        max-width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
         z-index: 9999 !important;
@@ -63,6 +62,9 @@ st.markdown("""
     .chart-container {
         flex: 9;   /* 화면 90% */
         width: 100%;
+        display: flex;
+        justify-content: center;  /* 중앙정렬 */
+        align-items: center;
     }
     .info-container {
         flex: 1;   /* 화면 10% */
@@ -70,6 +72,10 @@ st.markdown("""
         padding: 1rem;
         background: #fafafa;
         border-top: 1px solid #ddd;
+    }
+    .stPlotlyChart {
+        width: 100% !important;
+        margin: auto !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -155,7 +161,7 @@ if sel_code and st.session_state.open_code != sel_code:
 
             fig.update_layout(
                 xaxis_rangeslider_visible=False,
-                height=750,  # 차트 세로 크게
+                height=750,
                 margin=dict(l=20, r=20, t=40, b=40),
                 template="plotly_white"
             )
