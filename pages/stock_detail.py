@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 import plotly.graph_objects as go
+from streamlit_js_eval import streamlit_js_eval   # ✅ 모바일 감지용
 
 # -------------------------------
 # Supabase 연결
@@ -39,7 +40,6 @@ def load_detected_stock(code):
 # -------------------------------
 st.set_page_config(page_title="Stock Detail", layout="wide")
 
-# ✅ 세션 상태에서 종목코드 불러오기
 code = st.session_state.get("selected_code", None)
 name = st.session_state.get("selected_name", None)
 
@@ -47,28 +47,33 @@ if not code:
     st.warning("❌ 종목 코드가 없습니다. 메인 페이지에서 선택하세요.")
     st.stop()
 
-title_text = f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기"
-st.title(title_text)
+st.title(f"📈 {name} ({code}) 상세보기" if name else f"📈 {code} 상세보기")
 
 # -------------------------------
-# 차트 + 데이터 표시
+# 모바일/PC 감지
+# -------------------------------
+screen_width = streamlit_js_eval(js_expressions="window.innerWidth", key="SCR")
+is_mobile = screen_width and screen_width < 768  # 768px 이하 → 모바일로 간주
+
+# -------------------------------
+# 가격 데이터 로드 및 차트
 # -------------------------------
 price_df = load_prices(code)
 
 if not price_df.empty:
     detected = load_detected_stock(code)
 
-    # ✅ 선차트로 변환
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
+    # ✅ 캔들차트
+    fig = go.Figure(data=[
+        go.Candlestick(
             x=price_df["날짜"],
-            y=price_df["종가"],
-            mode="lines",
-            name="종가",
-            line=dict(color="blue")
+            open=price_df["시가"],
+            high=price_df["고가"],
+            low=price_df["저가"],
+            close=price_df["종가"],
+            name="가격"
         )
-    )
+    ])
 
     # ✅ 기준가 라인 추가
     if detected:
@@ -89,17 +94,18 @@ if not price_df.empty:
 
     fig.update_layout(
         autosize=True,
-        height=600,
+        xaxis_rangeslider_visible=False,
+        height=700 if not is_mobile else 500,
         margin=dict(l=10, r=10, t=40, b=40),
-        template="plotly_white",
-        xaxis_title="날짜",
-        yaxis_title="가격 (원)"
+        template="plotly_white"
     )
 
-    # ✅ 모바일에서 줌/드래그 비활성화 (고정 모드)
-    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
+    # ✅ 모바일 → 고정(static), PC → 인터랙티브
+    if is_mobile:
+        st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
+    else:
+        st.plotly_chart(fig, use_container_width=True, config={"responsive": True})
 
-    # 원본 데이터 테이블
     st.subheader("📊 원본 데이터")
     st.dataframe(price_df, use_container_width=True)
 
