@@ -55,7 +55,7 @@ st.markdown("""
     letter-spacing: 0.5px;
 }
 
-/* 📋 일반 텍스트에도 살짝 강조 */
+/* 📋 기본 폰트 설정 */
 body, p, div {
     font-family: "Segoe UI", "Noto Sans KR", sans-serif;
 }
@@ -105,27 +105,21 @@ if not show_all:
         color_continuous_scale="Agsunset",
     )
 
-    # ✅ 색상별로 밝기 계산 (matplotlib 없이)
-    def is_bright(rgba):
-        nums = [float(x) for x in re.findall(r"[\d.]+", rgba)]
-        if len(nums) >= 3:
-            brightness = (nums[0]*0.299 + nums[1]*0.587 + nums[2]*0.114)
-            return brightness > 180
-        return False
-
+    # ✅ 색상별 평균 밝기 계산 (matplotlib 없이)
     colors = px.colors.sample_colorscale("Agsunset", [i/(len(df_sorted)-1) for i in range(len(df_sorted))])
-    text_colors = ["black" if is_bright(c) else "white" for c in colors]
+    avg_brightness = sum(
+        (float(x) for c in colors for x in re.findall(r"[\d.]+", c)[:3])
+    ) / (len(colors) * 3)
+    text_color = "black" if avg_brightness > 180 else "white"
 
-    # ✅ 텍스트 스타일: 왼쪽 정렬, 그림자 효과
+    # ✅ 텍스트 스타일: 왼쪽 정렬, 전체 색 자동 적용
     fig.update_traces(
         text=df_sorted.apply(lambda r: f"{r['종목명']}  {r['수익률']:.2f}%", axis=1),
         textposition="inside",
         insidetextanchor="start",
-        textfont=dict(size=17, family="Arial Black"),
+        textfont=dict(size=17, family="Arial Black", color=text_color),
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
-    for i, color in enumerate(text_colors):
-        fig.data[i].textfont.color = color
 
     # ✅ 그래프 레이아웃
     fig.update_layout(
