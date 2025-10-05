@@ -32,41 +32,69 @@ def load_returns(limit=5):
     return pd.DataFrame(res.data)
 
 # ------------------------------------------------
-# CSS 스타일
+# CSS 스타일 (반응형 포함)
 # ------------------------------------------------
 st.markdown("""
 <style>
+:root {
+    --card-bg: linear-gradient(90deg, #ffed91, #ffc300);
+    --card-hover: linear-gradient(90deg, #fff6b0, #ffd84a);
+}
+.section-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+}
+.section {
+    flex: 1 1 48%;
+    min-width: 320px;
+    background-color: #fff;
+}
 .section-title {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 800;
     margin-bottom: 10px;
     color: #222;
 }
 .rank-box {
-    background: linear-gradient(90deg, #ffed91, #ffc300);
+    background: var(--card-bg);
     color: #000000;
     padding: 12px 18px;
     border-radius: 10px;
     font-weight: 700;
-    font-size: 17px;
+    font-size: 16px;
     margin-bottom: 10px;
     box-shadow: 1px 1px 4px rgba(0,0,0,0.15);
     cursor: pointer;
+    transition: background 0.3s ease;
 }
 .rank-box:hover {
-    background: linear-gradient(90deg, #fff6b0, #ffd84a);
+    background: var(--card-hover);
 }
 .rank-box span {
     float: right;
     font-weight: 700;
     color: #cc0000;
 }
-.button-disabled {
-    opacity: 0.5;
-    pointer-events: none;
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 25px;
 }
-body, p, div {
-    font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+button[disabled], .stButton>button[disabled] {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+}
+@media (max-width: 768px) {
+    .section {
+        flex: 1 1 100%;
+    }
+    .section-title {
+        text-align: center;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -75,44 +103,45 @@ body, p, div {
 # 데이터 불러오기
 # ------------------------------------------------
 df_all = load_returns()
-
 if df_all.empty:
     st.warning("⚠️ Supabase의 b_return 테이블에 데이터가 없습니다.")
     st.stop()
 
 df_all["수익률"] = df_all["수익률"].astype(float)
-
-# 상위 / 하위 5개
 df_top5 = df_all.sort_values("수익률", ascending=False).head(5).reset_index(drop=True)
 df_bottom5 = df_all.sort_values("수익률", ascending=True).head(5).reset_index(drop=True)
 
 # ------------------------------------------------
-# 두 컬럼 레이아웃
+# 반응형 2단 레이아웃 (HTML Flexbox)
 # ------------------------------------------------
-col1, col2 = st.columns(2)
+st.markdown('<div class="section-container">', unsafe_allow_html=True)
 
-# ✅ 왼쪽: 수익률 상위 5개 (눌림)
-with col1:
-    st.markdown('<div class="section-title">📈 수익률 상위 5개 (눌림형)</div>', unsafe_allow_html=True)
-    for i, row in df_top5.iterrows():
-        if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"top_{row['종목코드']}"):
-            st.session_state.selected_code = row["종목코드"]
-            st.session_state.selected_name = row["종목명"]
-            st.switch_page("pages/stock_detail.py")
+# 왼쪽 - 상위 5개
+st.markdown('<div class="section">', unsafe_allow_html=True)
+st.markdown('<div class="section-title">📈 수익률 상위 5개 (눌림형)</div>', unsafe_allow_html=True)
+for i, row in df_top5.iterrows():
+    if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"top_{row['종목코드']}"):
+        st.session_state.selected_code = row["종목코드"]
+        st.session_state.selected_name = row["종목명"]
+        st.switch_page("pages/stock_detail.py")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ✅ 오른쪽: 수익률 하위 5개 (추격)
-with col2:
-    st.markdown('<div class="section-title">📉 수익률 하위 5개 (추격형)</div>', unsafe_allow_html=True)
-    for i, row in df_bottom5.iterrows():
-        if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"bottom_{row['종목코드']}"):
-            st.session_state.selected_code = row["종목코드"]
-            st.session_state.selected_name = row["종목명"]
-            st.switch_page("pages/stock_detail.py")
+# 오른쪽 - 하위 5개
+st.markdown('<div class="section">', unsafe_allow_html=True)
+st.markdown('<div class="section-title">📉 수익률 하위 5개 (추격형)</div>', unsafe_allow_html=True)
+for i, row in df_bottom5.iterrows():
+    if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"bottom_{row['종목코드']}"):
+        st.session_state.selected_code = row["종목코드"]
+        st.session_state.selected_name = row["종목명"]
+        st.switch_page("pages/stock_detail.py")
+st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)  # section-container 닫기
 
 # ------------------------------------------------
 # 하단 버튼 (비활성화)
 # ------------------------------------------------
-st.markdown("---")
+st.markdown('<div class="button-row">', unsafe_allow_html=True)
 cols = st.columns(3)
 with cols[0]:
     st.button("🔍 전체 수익률 보기", disabled=True)
@@ -120,6 +149,7 @@ with cols[1]:
     st.button("📊 눌림 수익률 전체 보기", disabled=True)
 with cols[2]:
     st.button("⚡ 추격 수익률 전체 보기", disabled=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("---")
-st.caption("💡 좌측은 수익률 상위 5개(눌림형), 우측은 하위 5개(추격형)이며, 각 종목 클릭 시 차트 페이지로 이동합니다.")
+st.caption("📱 모바일에서도 좌우로 자동 정렬되며, 클릭 시 차트로 이동합니다.")
