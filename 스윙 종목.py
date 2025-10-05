@@ -70,10 +70,11 @@ st.markdown("""
 </style>
 
 <div class="scroll-nav">
-    <a href="?page=국내눌림" class="icon-btn">🟠 국내 눌림</a>
-    <a href="?page=국내추격" class="icon-btn">🔵 국내 추격</a>
-    <a href="?page=해외눌림" class="icon-btn">🟢 해외 눌림</a>
-    <a href="?page=해외추격" class="icon-btn">🔴 해외 추격</a>
+    <a href="?page=국내눌림" class="icon-btn">메인</a>
+    <a href="?page=국내눌림" class="icon-btn">🟠국내눌림</a>
+    <a href="?page=국내추격" class="icon-btn">🔵국내추격</a>
+    <a href="?page=해외눌림" class="icon-btn">🟢해외눌림</a>
+    <a href="?page=해외추격" class="icon-btn">🔴해외추격</a>
 </div>
 """, unsafe_allow_html=True)
 
@@ -208,3 +209,4 @@ st.markdown(cards_html, unsafe_allow_html=True)
 # ------------------------------------------------
 st.markdown("---")
 st.caption("💡 상단 스크롤 네비게이션으로 페이지를 선택하세요. (모바일: 손가락으로 좌우 스크롤 가능)")
+
