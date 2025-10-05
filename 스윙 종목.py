@@ -99,7 +99,7 @@ if not show_all:
     fig = px.bar(
         df_sorted,
         x="수익률",
-        y=df_sorted.index,
+        y="종목명",  # 종목명을 y축으로
         orientation="h",
         color="수익률",
         color_continuous_scale="Agsunset",
@@ -112,7 +112,7 @@ if not show_all:
     ) / (len(colors) * 3)
     text_color = "black" if avg_brightness > 180 else "white"
 
-    # ✅ 텍스트 스타일: 왼쪽 정렬, 전체 색 자동 적용
+    # ✅ 텍스트 스타일: 왼쪽 정렬
     fig.update_traces(
         text=df_sorted.apply(lambda r: f"{r['종목명']}  {r['수익률']:.2f}%", axis=1),
         textposition="inside",
@@ -121,11 +121,15 @@ if not show_all:
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
 
-    # ✅ 그래프 레이아웃
+    # ✅ 그래프 레이아웃: 수익률 1등이 위로 오도록
     fig.update_layout(
         xaxis_title=None,
         yaxis_title=None,
-        yaxis=dict(showticklabels=False, showgrid=False, categoryorder="total descending"),
+        yaxis=dict(
+            categoryorder="array",
+            categoryarray=list(df_sorted["종목명"]),  # 데이터 순서 유지
+            autorange="reversed"  # 🔹 역순으로 (1등이 위)
+        ),
         xaxis=dict(showgrid=False),
         coloraxis_showscale=False,
         height=320,
