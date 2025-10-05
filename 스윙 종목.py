@@ -146,7 +146,7 @@ if not show_all:
         )
 
 # ------------------------------------------------
-# 2️⃣ 전체 보기 모드
+# 2️⃣ 전체 보기 모드 (스크롤 가능)
 # ------------------------------------------------
 else:
     st.subheader("📊 전체 수익률 목록")
@@ -155,15 +155,16 @@ else:
         df[["종목명", "종목코드", "수익률(%)", "기간", "발생일", "발생일종가(원)", "현재가격(원)"]]
     )
     gb.configure_default_column(resizable=True, sortable=True, filter=True)
-    gb.configure_grid_options(domLayout="autoHeight")
+    gb.configure_grid_options(domLayout="normal")  # ✅ 스크롤 가능하게 설정
     grid_options = gb.build()
 
+    # ✅ 스크롤 가능한 높이 (테이블 잘림 방지)
     AgGrid(
         df,
         gridOptions=grid_options,
         fit_columns_on_grid_load=True,
         theme="streamlit",
-        height=600,
+        height=850,  # 화면 높이에 맞게 조절 가능 (600~1000 권장)
     )
 
 st.markdown("---")
