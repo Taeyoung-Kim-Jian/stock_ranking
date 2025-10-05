@@ -40,19 +40,42 @@ df_top5 = df_all.sort_values("수익률", ascending=False).head(5).reset_index(d
 df_bottom5 = df_all.sort_values("수익률", ascending=True).head(5).reset_index(drop=True)
 
 # ------------------------------------------------
-# CSS: 글씨/카드 작게 + 모바일 반응형
+# CSS (반응형 flex 2단 구조 + 모바일 유지)
 # ------------------------------------------------
 st.markdown("""
 <style>
 body, div, p {
     font-family: 'Noto Sans KR', sans-serif;
 }
+.flex-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    flex-wrap: nowrap;
+}
+.flex-column {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+}
+@media (max-width: 768px) {
+    .flex-container {
+        display: flex;
+        flex-direction: row; /* 📱 모바일에서도 좌우 유지 */
+        overflow-x: auto; /* 좌우 스크롤 허용 */
+    }
+    .flex-column {
+        flex: 0 0 48%; /* 모바일에서 반씩 */
+        min-width: 48%;
+    }
+}
 .section-title {
     font-size: 15px;
     font-weight: 800;
     text-align: center;
     color: #333;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 .rank-box {
     background: linear-gradient(90deg, #fff9c9, #ffd84a);
@@ -65,6 +88,7 @@ body, div, p {
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     transition: transform 0.2s ease;
     cursor: pointer;
+    white-space: nowrap;
 }
 .rank-box:hover {
     transform: scale(1.03);
@@ -75,57 +99,38 @@ body, div, p {
     color: #d11;
     font-weight: 700;
 }
-.stButton>button {
-    font-size: 12px !important;
-    padding: 5px 10px !important;
-}
-@media (max-width: 768px) {
-    .section-title {
-        font-size: 14px;
-    }
-    .rank-box {
-        font-size: 11px;
-        padding: 5px 6px;
-    }
-}
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 2단 컬럼 — Streamlit 기본 레이아웃
+# HTML 구조 (모바일/PC 모두 2단)
 # ------------------------------------------------
-col1, col2 = st.columns(2)
+st.markdown("<div class='flex-container'>", unsafe_allow_html=True)
 
-# ✅ 왼쪽: 수익률 상위 5개
-with col1:
-    st.markdown('<div class="section-title">📈 수익률 상위 5개 (눌림형)</div>', unsafe_allow_html=True)
-    for i, row in df_top5.iterrows():
-        st.markdown(
-            f"<div class='rank-box' onclick=\"window.parent.postMessage({{type: 'streamlit:setComponentValue', value: '{row['종목코드']}' }}, '*');\">"
-            f"{i+1}위. {row['종목명']} <span>{row['수익률']:.2f}%</span></div>",
-            unsafe_allow_html=True,
-        )
-        if st.button(f"{row['종목명']} ({row['종목코드']})", key=f"top_{row['종목코드']}"):
-            st.session_state.selected_code = row["종목코드"]
-            st.session_state.selected_name = row["종목명"]
-            st.switch_page("pages/stock_detail.py")
+# ✅ 왼쪽 컬럼
+st.markdown("<div class='flex-column'>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>📈 수익률 상위 5개 (눌림형)</div>", unsafe_allow_html=True)
+for i, row in df_top5.iterrows():
+    if st.button(f"{i+1}위. {row['종목명']} ({row['수익률']:.2f}%)", key=f"top_{row['종목코드']}"):
+        st.session_state.selected_code = row["종목코드"]
+        st.session_state.selected_name = row["종목명"]
+        st.switch_page("pages/stock_detail.py")
+st.markdown("</div>", unsafe_allow_html=True)
 
-# ✅ 오른쪽: 수익률 하위 5개
-with col2:
-    st.markdown('<div class="section-title">📉 수익률 하위 5개 (추격형)</div>', unsafe_allow_html=True)
-    for i, row in df_bottom5.iterrows():
-        st.markdown(
-            f"<div class='rank-box' onclick=\"window.parent.postMessage({{type: 'streamlit:setComponentValue', value: '{row['종목코드']}' }}, '*');\">"
-            f"{i+1}위. {row['종목명']} <span>{row['수익률']:.2f}%</span></div>",
-            unsafe_allow_html=True,
-        )
-        if st.button(f"{row['종목명']} ({row['종목코드']})", key=f"bottom_{row['종목코드']}"):
-            st.session_state.selected_code = row["종목코드"]
-            st.session_state.selected_name = row["종목명"]
-            st.switch_page("pages/stock_detail.py")
+# ✅ 오른쪽 컬럼
+st.markdown("<div class='flex-column'>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>📉 수익률 하위 5개 (추격형)</div>", unsafe_allow_html=True)
+for i, row in df_bottom5.iterrows():
+    if st.button(f"{i+1}위. {row['종목명']} ({row['수익률']:.2f}%)", key=f"bottom_{row['종목코드']}"):
+        st.session_state.selected_code = row["종목코드"]
+        st.session_state.selected_name = row["종목명"]
+        st.switch_page("pages/stock_detail.py")
+st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 하단 버튼 (비활성화)
+# 하단 버튼
 # ------------------------------------------------
 st.markdown("---")
 cols = st.columns(3)
@@ -136,4 +141,4 @@ with cols[1]:
 with cols[2]:
     st.button("⚡ 추격 수익률 전체 보기", disabled=True)
 st.markdown("---")
-st.caption("💡 PC와 모바일 모두 좌우 2단 구조로 자동 맞춤 표시됩니다.")
+st.caption("💡 PC와 모바일 모두 좌우 2단(가로 스크롤 포함)으로 표시됩니다.")
