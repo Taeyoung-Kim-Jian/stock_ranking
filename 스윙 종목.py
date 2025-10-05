@@ -46,7 +46,7 @@ if df.empty:
     st.stop()
 
 # ------------------------------------------------
-# 데이터 정리
+# 데이터 전처리
 # ------------------------------------------------
 df["수익률"] = df["수익률"].astype(float)
 df["현재가격"] = df["현재가격"].astype(float)
@@ -64,19 +64,29 @@ if not show_all:
     # 막대그래프 (Plotly)
     fig = px.bar(
         df.sort_values("수익률", ascending=True),
+        x="수익률",
+        y="종목명",
         orientation="h",
         text=df["수익률"].map("{:.2f}%".format),
         color="수익률",
         color_continuous_scale="Agsunset",
-        title="📈 상위 5개 종목 수익률 비교",
     )
+
+    # 불필요한 축 제목 제거 + 디자인 조정
     fig.update_layout(
-        xaxis_title="수익률 (%)",
-        yaxis_title="종목명",
+        xaxis_title=None,   # "수익률" 숨김
+        yaxis_title=None,   # "종목명" 숨김
         coloraxis_showscale=False,
         height=400,
-        margin=dict(l=40, r=40, t=60, b=40),
+        margin=dict(l=20, r=20, t=20, b=20),
     )
+
+    # 수익률 수치 표시 스타일
+    fig.update_traces(
+        textposition="outside",
+        hovertemplate="<b>%{y}</b><br>수익률: %{x:.2f}%"
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
     # 카드형 정보 출력
@@ -116,5 +126,3 @@ else:
 
 st.markdown("---")
 st.caption("💡 상위 5개는 수익률 순 정렬 기준이며, 전체 보기에서 모든 종목을 확인할 수 있습니다.")
-
-
