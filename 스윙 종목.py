@@ -35,12 +35,15 @@ if df_all.empty:
     st.warning("⚠️ Supabase의 b_return 테이블에 데이터가 없습니다.")
     st.stop()
 
+# ------------------------------------------------
+# 데이터 분류
+# ------------------------------------------------
 df_all["수익률"] = df_all["수익률"].astype(float)
 df_top5 = df_all.sort_values("수익률", ascending=False).head(5).reset_index(drop=True)
 df_bottom5 = df_all.sort_values("수익률", ascending=True).head(5).reset_index(drop=True)
 
 # ------------------------------------------------
-# CSS (반응형 flex 2단 구조 + 모바일 유지)
+# CSS 디자인
 # ------------------------------------------------
 st.markdown("""
 <style>
@@ -50,87 +53,98 @@ body, div, p {
 .flex-container {
     display: flex;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
     width: 100%;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 }
 .flex-column {
     flex: 1;
-    min-width: 0;
+    min-width: 48%;
     background: #fff;
 }
 @media (max-width: 768px) {
     .flex-container {
-        display: flex;
-        flex-direction: row; /* 📱 모바일에서도 좌우 유지 */
-        overflow-x: auto; /* 좌우 스크롤 허용 */
+        flex-direction: row;
+        overflow-x: auto;
+        white-space: nowrap;
     }
     .flex-column {
-        flex: 0 0 48%; /* 모바일에서 반씩 */
+        flex: 0 0 48%;
         min-width: 48%;
     }
 }
 .section-title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     text-align: center;
-    color: #333;
-    margin-bottom: 8px;
+    color: #444;
+    margin-bottom: 6px;
 }
 .rank-box {
-    background: linear-gradient(90deg, #fff9c9, #ffd84a);
+    background: linear-gradient(90deg, #ffe79b, #ffb300);
     color: #000;
-    padding: 6px 8px;
+    padding: 10px 12px;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 12px;
-    margin-bottom: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
-    cursor: pointer;
-    white-space: nowrap;
+    font-size: 13px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    text-align: left;
+    line-height: 1.2em;
 }
-.rank-box:hover {
-    transform: scale(1.03);
-    background: linear-gradient(90deg, #fffedb, #ffeb6d);
+.rank-box b {
+    display: block;
+    color: #c75000;
+    font-size: 14px;
 }
 .rank-box span {
-    float: right;
-    color: #d11;
-    font-weight: 700;
+    display: block;
+    color: #333;
+    font-size: 13px;
+    margin-top: 2px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------
-# HTML 구조 (모바일/PC 모두 2단)
+# 상위 5개 / 하위 5개 2단 레이아웃
 # ------------------------------------------------
 st.markdown("<div class='flex-container'>", unsafe_allow_html=True)
 
-# ✅ 왼쪽 컬럼
+# 왼쪽 (상위 5개)
 st.markdown("<div class='flex-column'>", unsafe_allow_html=True)
 st.markdown("<div class='section-title'>📈 수익률 상위 5개 (눌림형)</div>", unsafe_allow_html=True)
 for i, row in df_top5.iterrows():
-    if st.button(f"{i+1}위. {row['종목명']} ({row['수익률']:.2f}%)", key=f"top_{row['종목코드']}"):
-        st.session_state.selected_code = row["종목코드"]
-        st.session_state.selected_name = row["종목명"]
-        st.switch_page("pages/stock_detail.py")
+    st.markdown(
+        f"""
+        <div class='rank-box'>
+            <b>{i+1}위. {row['종목명']}</b>
+            <span>수익률: {row['수익률']:.2f}%</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 st.markdown("</div>", unsafe_allow_html=True)
 
-# ✅ 오른쪽 컬럼
+# 오른쪽 (하위 5개)
 st.markdown("<div class='flex-column'>", unsafe_allow_html=True)
 st.markdown("<div class='section-title'>📉 수익률 하위 5개 (추격형)</div>", unsafe_allow_html=True)
 for i, row in df_bottom5.iterrows():
-    if st.button(f"{i+1}위. {row['종목명']} ({row['수익률']:.2f}%)", key=f"bottom_{row['종목코드']}"):
-        st.session_state.selected_code = row["종목코드"]
-        st.session_state.selected_name = row["종목명"]
-        st.switch_page("pages/stock_detail.py")
+    st.markdown(
+        f"""
+        <div class='rank-box'>
+            <b>{i+1}위. {row['종목명']}</b>
+            <span>수익률: {row['수익률']:.2f}%</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 하단 버튼
+# 하단 버튼 (비활성)
 # ------------------------------------------------
 st.markdown("---")
 cols = st.columns(3)
@@ -141,4 +155,4 @@ with cols[1]:
 with cols[2]:
     st.button("⚡ 추격 수익률 전체 보기", disabled=True)
 st.markdown("---")
-st.caption("💡 PC와 모바일 모두 좌우 2단(가로 스크롤 포함)으로 표시됩니다.")
+st.caption("💡 PC·모바일 모두 2단으로 표시됩니다. 모바일에서는 좌우 스크롤 가능.")
