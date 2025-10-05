@@ -38,7 +38,7 @@ st.markdown("""
 <style>
 .plotly text {
     font-weight: 700 !important;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.6);
 }
 .highlight-text {
     background: linear-gradient(90deg, #ff7e00, #ffb700);
@@ -103,16 +103,16 @@ if not show_all:
         range_color=(df_sorted["수익률"].min(), df_sorted["수익률"].max())
     )
 
-    # ✅ 텍스트 스타일 (흰색 고정)
+    # ✅ 텍스트 스타일 (검정색으로 변경)
     fig.update_traces(
         text=df_sorted.apply(lambda r: f"{r['종목명']}  {r['수익률']:.2f}%", axis=1),
         textposition="inside",
         insidetextanchor="start",
-        textfont=dict(size=17, family="Arial Black", color="white"),
+        textfont=dict(size=17, family="Arial Black", color="black"),
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
 
-    # ✅ 축 제거 + 1등 위로
+    # ✅ 그래프 레이아웃 고정 + 축 제거
     fig.update_layout(
         xaxis=dict(visible=False),
         yaxis=dict(
@@ -122,7 +122,7 @@ if not show_all:
             autorange="reversed",
         ),
         coloraxis_showscale=False,
-        height=320,
+        height=400,  # ✅ 그래프 높이 고정
         margin=dict(l=20, r=20, t=20, b=20),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
@@ -164,7 +164,7 @@ else:
         gridOptions=grid_options,
         fit_columns_on_grid_load=True,
         theme="streamlit",
-        height=850,  # 화면 높이에 맞게 조절 가능 (600~1000 권장)
+        height=850,  # 화면 크기에 맞게 조절 가능
     )
 
 st.markdown("---")
