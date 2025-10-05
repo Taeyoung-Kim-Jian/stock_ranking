@@ -14,7 +14,28 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # 페이지 설정
 # ------------------------------------------------
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
-st.markdown("<h4 style='text-align:center;'>💹 스윙 종목 TOP5 대시보드</h4>", unsafe_allow_html=True)
+
+# ------------------------------------------------
+# 상단 네비게이션 버튼
+# ------------------------------------------------
+st.markdown("<h4 style='text-align:center; margin-bottom:0;'>💹 스윙 종목 TOP5 대시보드</h4>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:13px; color:gray; margin-top:2px;'>카테고리를 선택하여 세부 페이지로 이동하세요.</p>", unsafe_allow_html=True)
+
+col_nav = st.columns(4)
+with col_nav[0]:
+    if st.button("🇰🇷 국내 눌림", use_container_width=True):
+        st.switch_page("pages/국내눌림.py")
+with col_nav[1]:
+    if st.button("🇰🇷 국내 추격", use_container_width=True):
+        st.switch_page("pages/국내추격.py")
+with col_nav[2]:
+    if st.button("🌎 해외 눌림", use_container_width=True):
+        st.switch_page("pages/해외눌림.py")
+with col_nav[3]:
+    if st.button("🌎 해외 추격", use_container_width=True):
+        st.switch_page("pages/해외추격.py")
+
+st.markdown("---")
 
 # ------------------------------------------------
 # 데이터 로딩
@@ -36,13 +57,12 @@ if df_all.empty:
     st.stop()
 
 # ------------------------------------------------
-# 데이터 샘플 구성 (가상 데이터 포함)
+# 데이터 구성
 # ------------------------------------------------
 df_all["수익률"] = df_all["수익률"].astype(float)
 domestic_top5 = df_all.sort_values("수익률", ascending=False).head(5).reset_index(drop=True)
 domestic_bottom5 = df_all.sort_values("수익률", ascending=True).head(5).reset_index(drop=True)
 
-# 가상 데이터 (예시용)
 foreign_top5 = pd.DataFrame({
     "종목명": ["Apple", "Nvidia", "Microsoft", "Tesla", "Amazon"],
     "수익률": [15.4, 13.2, 11.8, 10.6, 9.9]
@@ -53,7 +73,7 @@ foreign_bottom5 = pd.DataFrame({
 })
 
 # ------------------------------------------------
-# CSS 스타일 정의
+# CSS
 # ------------------------------------------------
 st.markdown("""
 <style>
@@ -123,26 +143,20 @@ def make_card(title, df):
     return html
 
 # ------------------------------------------------
-# 4개 카드 표시
+# 카드 4개 표시
 # ------------------------------------------------
-cards_html = """
+cards_html = f"""
 <div class='dashboard-grid'>
-    {0}
-    {1}
-    {2}
-    {3}
+    {make_card("🇰🇷 국내 눌림 상위 TOP5", domestic_top5)}
+    {make_card("🇰🇷 국내 눌림 하위 TOP5", domestic_bottom5)}
+    {make_card("🌎 해외 성장 상위 TOP5", foreign_top5)}
+    {make_card("🌎 해외 성장 하위 TOP5", foreign_bottom5)}
 </div>
-""".format(
-    make_card("🇰🇷 국내 눌림 상위 TOP5", domestic_top5),
-    make_card("🇰🇷 국내 눌림 하위 TOP5", domestic_bottom5),
-    make_card("🌎 해외 성장 상위 TOP5", foreign_top5),
-    make_card("🌎 해외 성장 하위 TOP5", foreign_bottom5)
-)
-
+"""
 st.markdown(cards_html, unsafe_allow_html=True)
 
 # ------------------------------------------------
 # 하단 안내
 # ------------------------------------------------
 st.markdown("---")
-st.caption("💡 각 카드에는 상위/하위 5개 종목이 표시됩니다. 모바일에서도 2단 레이아웃으로 자동 조정됩니다.")
+st.caption("💡 상단 버튼을 눌러 각 카테고리의 상세 페이지로 이동할 수 있습니다. (PC: 4단 / 모바일: 2단 자동 조정)")
