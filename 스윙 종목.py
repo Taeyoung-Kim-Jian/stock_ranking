@@ -16,24 +16,47 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 
 # ------------------------------------------------
-# 상단 네비게이션 버튼
+# 상단 아이콘 네비게이션 바 (최상단)
+# ------------------------------------------------
+st.markdown("""
+<style>
+.icon-nav {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin-bottom: 12px;
+}
+.icon-btn {
+    text-decoration: none;
+    font-size: 28px;
+    transition: transform 0.2s ease;
+}
+.icon-btn:hover {
+    transform: scale(1.25);
+}
+@media (max-width: 768px) {
+    .icon-nav {
+        gap: 18px;
+    }
+    .icon-btn {
+        font-size: 26px;
+    }
+}
+</style>
+
+<div class="icon-nav">
+    <a href="?page=국내눌림" class="icon-btn" title="국내 눌림">🇰🇷📉</a>
+    <a href="?page=국내추격" class="icon-btn" title="국내 추격">🇰🇷🚀</a>
+    <a href="?page=해외눌림" class="icon-btn" title="해외 눌림">🌎📉</a>
+    <a href="?page=해외추격" class="icon-btn" title="해외 추격">🌎🚀</a>
+</div>
+""", unsafe_allow_html=True)
+
+# ------------------------------------------------
+# 페이지 타이틀
 # ------------------------------------------------
 st.markdown("<h4 style='text-align:center; margin-bottom:0;'>💹 스윙 종목 TOP5 대시보드</h4>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:13px; color:gray; margin-top:2px;'>카테고리를 선택하여 세부 페이지로 이동하세요.</p>", unsafe_allow_html=True)
-
-col_nav = st.columns(4)
-with col_nav[0]:
-    if st.button("🇰🇷 국내 눌림", use_container_width=True):
-        st.switch_page("pages/국내눌림.py")
-with col_nav[1]:
-    if st.button("🇰🇷 국내 추격", use_container_width=True):
-        st.switch_page("pages/국내추격.py")
-with col_nav[2]:
-    if st.button("🌎 해외 눌림", use_container_width=True):
-        st.switch_page("pages/해외눌림.py")
-with col_nav[3]:
-    if st.button("🌎 해외 추격", use_container_width=True):
-        st.switch_page("pages/해외추격.py")
 
 st.markdown("---")
 
@@ -159,4 +182,4 @@ st.markdown(cards_html, unsafe_allow_html=True)
 # 하단 안내
 # ------------------------------------------------
 st.markdown("---")
-st.caption("💡 상단 버튼을 눌러 각 카테고리의 상세 페이지로 이동할 수 있습니다. (PC: 4단 / 모바일: 2단 자동 조정)")
+st.caption("💡 상단 아이콘을 눌러 각 카테고리 상세 페이지로 이동할 수 있습니다. (PC: 4단 / 모바일: 2단 자동 조정)")
