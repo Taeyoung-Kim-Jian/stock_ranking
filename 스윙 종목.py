@@ -37,13 +37,10 @@ st.title("💹 스윙 종목 대시보드")
 # ------------------------------------------------
 st.markdown("""
 <style>
-/* 🔹 그래프 내부 텍스트 효과 (그림자 + 강조) */
 .plotly text {
     font-weight: 700 !important;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
 }
-
-/* 🔸 카드 텍스트 강조 스타일 */
 .highlight-text {
     background: linear-gradient(90deg, #ff7e00, #ffb700);
     color: #ffffff;
@@ -54,8 +51,6 @@ st.markdown("""
     text-shadow: 2px 2px 6px #000;
     letter-spacing: 0.5px;
 }
-
-/* 📋 기본 폰트 설정 */
 body, p, div {
     font-family: "Segoe UI", "Noto Sans KR", sans-serif;
 }
@@ -92,27 +87,34 @@ df["발생일종가(원)"] = df["발생일종가"].map("{:,.0f}".format)
 if not show_all:
     st.subheader("🏆 수익률 상위 5개 종목")
 
-    # ✅ 수익률 높은 순 정렬
     df_sorted = df.sort_values("수익률", ascending=False)
 
-    # ✅ Plotly 막대그래프 생성
+    # ✅ 노랑 → 주황 → 빨강 색상 스케일 적용
     fig = px.bar(
         df_sorted,
         x="수익률",
         y="종목명",
         orientation="h",
         color="수익률",
-        color_continuous_scale="Agsunset",
+        color_continuous_scale=[
+            (0.0, "#ffff66"),  # 노랑
+            (0.5, "#ff9900"),  # 주황
+            (1.0, "#cc0000"),  # 빨강
+        ],
+        range_color=(df_sorted["수익률"].min(), df_sorted["수익률"].max())
     )
 
-    # ✅ 색상별 평균 밝기 계산 (matplotlib 없이)
-    colors = px.colors.sample_colorscale("Agsunset", [i/(len(df_sorted)-1) for i in range(len(df_sorted))])
+    # ✅ 색상 밝기에 따라 텍스트 색 자동 설정
+    colors = px.colors.sample_colorscale(
+        [(0.0, "#ffff66"), (0.5, "#ff9900"), (1.0, "#cc0000")],
+        [i/(len(df_sorted)-1) for i in range(len(df_sorted))]
+    )
     avg_brightness = sum(
         (float(x) for c in colors for x in re.findall(r"[\d.]+", c)[:3])
     ) / (len(colors) * 3)
     text_color = "black" if avg_brightness > 180 else "white"
 
-    # ✅ 텍스트 스타일: 왼쪽 정렬
+    # ✅ 텍스트 스타일
     fig.update_traces(
         text=df_sorted.apply(lambda r: f"{r['종목명']}  {r['수익률']:.2f}%", axis=1),
         textposition="inside",
@@ -121,14 +123,14 @@ if not show_all:
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
 
-    # ✅ 그래프 레이아웃: 1등이 위 + xy축 완전 제거
+    # ✅ 축 제거 + 1등 위로
     fig.update_layout(
-        xaxis=dict(visible=False),  # x축 제거
+        xaxis=dict(visible=False),
         yaxis=dict(
-            visible=False,           # y축 제거
+            visible=False,
             categoryorder="array",
             categoryarray=list(df_sorted["종목명"]),
-            autorange="reversed",    # 1등이 위
+            autorange="reversed",
         ),
         coloraxis_showscale=False,
         height=320,
@@ -139,7 +141,7 @@ if not show_all:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # ✅ 카드 텍스트 섹션
+    # ✅ 카드 요약
     st.markdown("---")
     for i, row in df_sorted.iterrows():
         st.markdown(
