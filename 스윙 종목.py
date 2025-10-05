@@ -16,48 +16,60 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 st.markdown("""
 <style>
-
 /* ✅ 기본 메뉴 및 푸터 완전 제거 */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-footer:after {content:'';}
-.viewerBadge_link, .viewerBadge_container__1QSob, .viewerBadgeLink--streamlit {display: none !important;}
-.stAppToolbar, header, .stToolbarActions {display: none !important;}
+#MainMenu {visibility: hidden !important;}
+header {visibility: hidden !important;}
+footer {visibility: hidden !important;}
+.stAppToolbar {display: none !important;}
+.viewerBadge_link, .viewerBadge_container__1QSob,
+.viewerBadgeLink--streamlit, [data-testid="stStatusWidget"],
+[data-testid="stDecoration"], [data-testid="stToolbar"],
+[data-testid="stAppViewContainer"] footer,
+[data-testid="stBottomLeftBadge"], [data-testid="stDecorationContainer"],
+[data-testid="stLogo"], .stDeployButton, .stAppFooter,
+a[href*="streamlit.io"], div:has(> .viewerBadge_link) {
+    display: none !important;
+}
 
-/* ✅ 전체 상단 padding 제거 (더 깔끔하게) */
+/* ✅ Streamlit Cloud 모바일 푸터 숨김 (강제 오버라이드) */
+footer, [class*="stActionButton"], [class*="stAppFooter"], [class*="viewerBadgeLink"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ✅ 앱 전체 여백 및 배경 조정 */
 .appview-container .main .block-container {
     padding-top: 0.5rem !important;
 }
-
-/* ✅ Streamlit 기본 여백 조정 */
 .block-container {
     padding-left: 1.2rem;
     padding-right: 1.2rem;
 }
-
-/* ✅ 모바일 최적화: 가로 스크롤 시 부드럽게, 버튼 클릭 간격 확대 */
 @media (max-width: 768px) {
     .block-container {
         padding-left: 0.8rem;
         padding-right: 0.8rem;
     }
-    button, .stButton>button {
-        min-height: 34px;
-    }
 }
 
-/* ✅ 색상 및 폰트 통일 */
-html, body, [class*="css"]  {
+/* ✅ 폰트 및 배경 색상 통일 */
+html, body, [class*="css"] {
     font-family: 'Noto Sans KR', sans-serif;
     background-color: #fffaf0;
 }
 
-/* ✅ 탭 / 주소창 영역 색상 (PWA 스타일 느낌) */
-:root {
-  color-scheme: light;
+/* ✅ 모바일 브라우저에서 전체 높이 확보 */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+    overscroll-behavior: none;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # ------------------------------------------------
@@ -254,4 +266,5 @@ st.markdown(cards_html, unsafe_allow_html=True)
 # ------------------------------------------------
 st.markdown("---")
 st.caption("💡 상단 스크롤 네비게이션으로 페이지를 선택하세요. (모바일: 손가락으로 좌우 스크롤 가능)")
+
 
