@@ -3,6 +3,7 @@ import pandas as pd
 from supabase import create_client
 from st_aggrid import AgGrid, GridOptionsBuilder
 import plotly.express as px
+import matplotlib.colors as mcolors
 
 # ------------------------------------------------
 # Supabase 연결
@@ -30,6 +31,36 @@ def load_returns(limit=None):
 # ------------------------------------------------
 st.set_page_config(page_title="스윙 종목", layout="wide")
 st.title("💹 스윙 종목 대시보드")
+
+# ------------------------------------------------
+# CSS 스타일 적용
+# ------------------------------------------------
+st.markdown("""
+<style>
+/* 🔹 그래프 내부 텍스트 효과 (그림자 + 강조) */
+.plotly text {
+    font-weight: 700 !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+}
+
+/* 🔸 카드 텍스트 강조 스타일 */
+.highlight-text {
+    background: linear-gradient(90deg, #ff7e00, #ffb700);
+    color: #ffffff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 17px;
+    text-shadow: 2px 2px 6px #000;
+    letter-spacing: 0.5px;
+}
+
+/* 📋 일반 텍스트에도 살짝 강조 */
+body, p, div {
+    font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ------------------------------------------------
 # 데이터 로드
@@ -61,39 +92,42 @@ df["발생일종가(원)"] = df["발생일종가"].map("{:,.0f}".format)
 if not show_all:
     st.subheader("🏆 수익률 상위 5개 종목")
 
-    # ✅ 수익률 높은 순 정렬 (1등이 위쪽)
+    # ✅ 수익률 높은 순 정렬
     df_sorted = df.sort_values("수익률", ascending=False)
 
-    # ✅ Plotly 막대그래프
+    # ✅ Plotly 막대그래프 생성
     fig = px.bar(
         df_sorted,
         x="수익률",
-        y=df_sorted.index,  # y축은 인덱스 (숨김용)
+        y=df_sorted.index,
         orientation="h",
         color="수익률",
         color_continuous_scale="Agsunset",
     )
 
-    # ✅ 막대 내부 왼쪽 정렬 텍스트 (종목명 + 수익률)
+    # ✅ 색상에 따라 텍스트 색상 자동 설정
+    colors = px.colors.sample_colorscale("Agsunset", [i/(len(df_sorted)-1) for i in range(len(df_sorted))])
+    text_colors = ["black" if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] > 0.7 else "white" for c in colors]
+
+    # ✅ 텍스트 스타일: 왼쪽 정렬, 그림자 효과
     fig.update_traces(
         text=df_sorted.apply(lambda r: f"{r['종목명']}  {r['수익률']:.2f}%", axis=1),
         textposition="inside",
-        insidetextanchor="start",  # 왼쪽 정렬
-        textfont=dict(color="white", size=16, family="Arial Black"),
+        insidetextanchor="start",
+        textfont=dict(size=17, family="Arial Black"),
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
+    for i, color in enumerate(text_colors):
+        fig.data[i].textfont.color = color
 
-    # ✅ 그래프 디자인 (y축 제거, 높이 축소)
+    # ✅ 그래프 레이아웃
     fig.update_layout(
         xaxis_title=None,
         yaxis_title=None,
-        yaxis=dict(
-            showticklabels=False,   # y축 종목명 제거
-            showgrid=False
-        ),
+        yaxis=dict(showticklabels=False, showgrid=False, categoryorder="total descending"),
         xaxis=dict(showgrid=False),
         coloraxis_showscale=False,
-        height=300,
+        height=320,
         margin=dict(l=20, r=20, t=20, b=20),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
@@ -101,19 +135,20 @@ if not show_all:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # ✅ 카드형 요약 표시
+    # ✅ 카드 텍스트 섹션
     st.markdown("---")
     for i, row in df_sorted.iterrows():
         st.markdown(
             f"""
-            ### 🥇 {i+1}. **{row['종목명']} ({row['종목코드']})**
-            - 수익률: **{row['수익률(%)']}**
-            - 발생일: {row['발생일']}  (기간: {row['기간']}일)
-            - 발생일 종가: {row['발생일종가(원)']}원  
-              현재가격: {row['현재가격(원)']}원
-            """
+            <div class="highlight-text">
+            🥇 {i+1}. <b>{row['종목명']} ({row['종목코드']})</b> — {row['수익률(%)']}
+            </div>
+            <p>📅 {row['발생일']} (기간: {row['기간']}일)<br>
+            💰 {row['발생일종가(원)']} → {row['현재가격(원)']}</p>
+            <hr>
+            """,
+            unsafe_allow_html=True
         )
-        st.divider()
 
 # ------------------------------------------------
 # 2️⃣ 전체 보기 모드
