@@ -14,27 +14,20 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # 페이지 설정
 # ------------------------------------------------
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
-st.title("💹 스윙 종목 ")
+st.title("💹 스윙 종목 대시보드")
 
 # ------------------------------------------------
 # 데이터 로딩 함수
 # ------------------------------------------------
 @st.cache_data(ttl=300)
-def load_returns(category=None, limit=5):
+def load_returns(limit=5):
     """Supabase에서 b_return 데이터 로드"""
     query = (
         supabase.table("b_return")
         .select("종목명, 종목코드, 수익률, 발생일, 발생일종가, 현재가격, 기간, 구분")
         .order("수익률", desc=True)
+        .limit(5000)
     )
-
-    # 구분값으로 분리 (B0~B2는 눌림 / B3~T는 추격 예시)
-    if category == "눌림":
-        query = query.like("구분", "B%")
-    elif category == "추격":
-        query = query.like("구분", "T%")
-
-    query = query.limit(limit)
     res = query.execute()
     return pd.DataFrame(res.data)
 
@@ -68,14 +61,12 @@ st.markdown("""
     font-weight: 700;
     color: #cc0000;
 }
+.button-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
 body, p, div {
     font-family: "Segoe UI", "Noto Sans KR", sans-serif;
-}
-.button-row {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 30px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -83,65 +74,52 @@ body, p, div {
 # ------------------------------------------------
 # 데이터 불러오기
 # ------------------------------------------------
-df_pullback = load_returns(category="눌림", limit=5)
-df_chase = load_returns(category="추격", limit=5)
+df_all = load_returns()
 
-if df_pullback.empty and df_chase.empty:
+if df_all.empty:
     st.warning("⚠️ Supabase의 b_return 테이블에 데이터가 없습니다.")
     st.stop()
+
+df_all["수익률"] = df_all["수익률"].astype(float)
+
+# 상위 / 하위 5개
+df_top5 = df_all.sort_values("수익률", ascending=False).head(5).reset_index(drop=True)
+df_bottom5 = df_all.sort_values("수익률", ascending=True).head(5).reset_index(drop=True)
 
 # ------------------------------------------------
 # 두 컬럼 레이아웃
 # ------------------------------------------------
 col1, col2 = st.columns(2)
 
-# ✅ 왼쪽: 눌림 수익률 TOP 5
+# ✅ 왼쪽: 수익률 상위 5개 (눌림)
 with col1:
-    st.markdown('<div class="section-title">📉 눌림 수익률 TOP 5</div>', unsafe_allow_html=True)
-    if not df_pullback.empty:
-        df_pullback = df_pullback.sort_values("수익률", ascending=False).reset_index(drop=True)
-        for i, row in df_pullback.iterrows():
-            if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"pull_{row['종목코드']}"):
-                st.session_state.selected_code = row["종목코드"]
-                st.session_state.selected_name = row["종목명"]
-                st.switch_page("pages/stock_detail.py")
-    else:
-        st.info("데이터가 없습니다.")
+    st.markdown('<div class="section-title">📈 수익률 상위 5개 (눌림형)</div>', unsafe_allow_html=True)
+    for i, row in df_top5.iterrows():
+        if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"top_{row['종목코드']}"):
+            st.session_state.selected_code = row["종목코드"]
+            st.session_state.selected_name = row["종목명"]
+            st.switch_page("pages/stock_detail.py")
 
-# ✅ 오른쪽: 추격 수익률 TOP 5
+# ✅ 오른쪽: 수익률 하위 5개 (추격)
 with col2:
-    st.markdown('<div class="section-title">🚀 추격 수익률 TOP 5</div>', unsafe_allow_html=True)
-    if not df_chase.empty:
-        df_chase = df_chase.sort_values("수익률", ascending=False).reset_index(drop=True)
-        for i, row in df_chase.iterrows():
-            if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"chase_{row['종목코드']}"):
-                st.session_state.selected_code = row["종목코드"]
-                st.session_state.selected_name = row["종목명"]
-                st.switch_page("pages/stock_detail.py")
-    else:
-        st.info("데이터가 없습니다.")
+    st.markdown('<div class="section-title">📉 수익률 하위 5개 (추격형)</div>', unsafe_allow_html=True)
+    for i, row in df_bottom5.iterrows():
+        if st.button(f"{i+1}위. {row['종목명']} ({row['종목코드']}) — {row['수익률']:.2f}%", key=f"bottom_{row['종목코드']}"):
+            st.session_state.selected_code = row["종목코드"]
+            st.session_state.selected_name = row["종목명"]
+            st.switch_page("pages/stock_detail.py")
 
 # ------------------------------------------------
-# 하단 버튼 영역
-# ------------------------------------------------
-st.markdown('<div class="button-row">', unsafe_allow_html=True)
-
-col_a, col_b, col_c = st.columns(3)
-with col_a:
-    if st.button("🔍 전체 수익률 보기"):
-        st.switch_page("pages/total_returns.py")
-with col_b:
-    if st.button("📊 눌림 수익률 전체 보기"):
-        st.switch_page("pages/pullback_returns.py")
-with col_c:
-    if st.button("⚡ 추격 수익률 전체 보기"):
-        st.switch_page("pages/chase_returns.py")
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ------------------------------------------------
-# 푸터
+# 하단 버튼 (비활성화)
 # ------------------------------------------------
 st.markdown("---")
-st.caption("💡 위의 Top5 리스트에서 클릭 시 차트 페이지로 이동합니다. 아래 버튼으로 전체 보기 전환 가능합니다.")
+cols = st.columns(3)
+with cols[0]:
+    st.button("🔍 전체 수익률 보기", disabled=True)
+with cols[1]:
+    st.button("📊 눌림 수익률 전체 보기", disabled=True)
+with cols[2]:
+    st.button("⚡ 추격 수익률 전체 보기", disabled=True)
 
+st.markdown("---")
+st.caption("💡 좌측은 수익률 상위 5개(눌림형), 우측은 하위 5개(추격형)이며, 각 종목 클릭 시 차트 페이지로 이동합니다.")
