@@ -3,7 +3,6 @@ import pandas as pd
 from supabase import create_client
 from st_aggrid import AgGrid, GridOptionsBuilder
 import plotly.express as px
-import re  # 색상값 파싱용
 
 # ------------------------------------------------
 # Supabase 연결
@@ -104,22 +103,12 @@ if not show_all:
         range_color=(df_sorted["수익률"].min(), df_sorted["수익률"].max())
     )
 
-    # ✅ 색상 밝기에 따라 텍스트 색 자동 설정
-    colors = px.colors.sample_colorscale(
-        [(0.0, "#ffff66"), (0.5, "#ff9900"), (1.0, "#cc0000")],
-        [i/(len(df_sorted)-1) for i in range(len(df_sorted))]
-    )
-    avg_brightness = sum(
-        (float(x) for c in colors for x in re.findall(r"[\d.]+", c)[:3])
-    ) / (len(colors) * 3)
-    text_color = "black" if avg_brightness > 180 else "white"
-
-    # ✅ 텍스트 스타일
+    # ✅ 텍스트 스타일 (흰색 고정)
     fig.update_traces(
         text=df_sorted.apply(lambda r: f"{r['종목명']}  {r['수익률']:.2f}%", axis=1),
         textposition="inside",
         insidetextanchor="start",
-        textfont=dict(size=17, family="Arial Black", color=text_color),
+        textfont=dict(size=17, family="Arial Black", color="white"),
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
 
