@@ -3,7 +3,7 @@ import pandas as pd
 from supabase import create_client
 from st_aggrid import AgGrid, GridOptionsBuilder
 import plotly.express as px
-import matplotlib.colors as mcolors
+import re  # 색상값 파싱용
 
 # ------------------------------------------------
 # Supabase 연결
@@ -105,9 +105,16 @@ if not show_all:
         color_continuous_scale="Agsunset",
     )
 
-    # ✅ 색상에 따라 텍스트 색상 자동 설정
+    # ✅ 색상별로 밝기 계산 (matplotlib 없이)
+    def is_bright(rgba):
+        nums = [float(x) for x in re.findall(r"[\d.]+", rgba)]
+        if len(nums) >= 3:
+            brightness = (nums[0]*0.299 + nums[1]*0.587 + nums[2]*0.114)
+            return brightness > 180
+        return False
+
     colors = px.colors.sample_colorscale("Agsunset", [i/(len(df_sorted)-1) for i in range(len(df_sorted))])
-    text_colors = ["black" if mcolors.rgb_to_hsv(mcolors.to_rgb(c))[2] > 0.7 else "white" for c in colors]
+    text_colors = ["black" if is_bright(c) else "white" for c in colors]
 
     # ✅ 텍스트 스타일: 왼쪽 정렬, 그림자 효과
     fig.update_traces(
