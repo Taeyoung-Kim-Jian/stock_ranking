@@ -1,3 +1,5 @@
+# pages/stock_detail.py
+# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -33,17 +35,26 @@ st.title(f"📈 {name} ({code}) 상세 차트")
 @st.cache_data(ttl=300)
 def load_prices(code):
     """prices 테이블에서 최대 5000개 데이터 로드"""
-    res = (
-        supabase.table("prices")
-        .select("날짜, 종가")
-        .eq("종목코드", code)
-        .order("날짜", desc=False)
-        .range(0, 4999)  # ✅ 최대 5000개까지 가져오기
-        .execute()
-    )
-    df = pd.DataFrame(res.data)
+    code = str(code).zfill(6)  # ✅ 항상 6자리 문자열로 변환
+    all_data = []
+    chunk_size = 1000
+
+    for i in range(0, 5000, chunk_size):
+        res = (
+            supabase.table("prices")
+            .select("날짜, 종가")
+            .eq("종목코드", code)
+            .order("날짜", desc=False)
+            .range(i, i + chunk_size - 1)
+            .execute()
+        )
+        if not res.data:
+            break
+        all_data.extend(res.data)
+
+    df = pd.DataFrame(all_data)
     if not df.empty:
-        # ✅ 명시적으로 날짜 변환 (2025년 데이터 포함)
+        # ✅ 날짜가 20250128 같은 형식이면 변환
         df["날짜"] = pd.to_datetime(df["날짜"], format="%Y%m%d", errors="coerce")
         df = df.dropna(subset=["날짜"])
         df["종가"] = df["종가"].astype(float)
@@ -53,12 +64,13 @@ def load_prices(code):
 @st.cache_data(ttl=300)
 def load_b_points(code):
     """low_after_b 테이블에서 B 포인트 로드"""
+    code = str(code).zfill(6)
     res = (
         supabase.table("low_after_b")
         .select("구분, b가격, 발생일")
         .eq("종목코드", code)
         .order("발생일", desc=True)
-        .range(0, 999)  # ✅ B포인트도 최대 1000개까지
+        .range(0, 999)
         .execute()
     )
     df = pd.DataFrame(res.data)
@@ -74,7 +86,7 @@ df_price = load_prices(code)
 df_bpoints = load_b_points(code)
 
 if df_price.empty:
-    st.warning("⚠️ 가격 데이터가 없습니다.")
+    st.warning("⚠️ 가격 데이터가 없습니다. (Supabase 'prices' 테이블을 확인하세요.)")
     st.stop()
 
 # ------------------------------------------------
@@ -96,13 +108,14 @@ fig.add_trace(
 # ✅ B 포인트 수평선
 if not df_bpoints.empty:
     for _, row in df_bpoints.iterrows():
-        fig.add_hline(
-            y=row["b가격"],
-            line=dict(color="red", width=1.8, dash="dot"),
-            annotation_text=f"B({row['구분']})",
-            annotation_position="right",
-            annotation_font=dict(color="red", size=12),
-        )
+        if pd.notna(row["b가격"]):
+            fig.add_hline(
+                y=row["b가격"],
+                line=dict(color="red", width=1.8, dash="dot"),
+                annotation_text=f"B({row['구분']})",
+                annotation_position="right",
+                annotation_font=dict(color="red", size=12),
+            )
 
 # ------------------------------------------------
 # 차트 레이아웃
