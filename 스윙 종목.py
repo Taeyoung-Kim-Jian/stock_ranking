@@ -16,31 +16,32 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 st.markdown("""
 <style>
-/* ✅ 기본 메뉴 및 푸터 완전 제거 */
+/* --- Streamlit Cloud 푸터/로고 제거 --- */
 #MainMenu {visibility: hidden !important;}
 header {visibility: hidden !important;}
 footer {visibility: hidden !important;}
-.stAppToolbar {display: none !important;}
+.stAppToolbar, .stAppHeader {display: none !important;}
 .viewerBadge_link, .viewerBadge_container__1QSob,
 .viewerBadgeLink--streamlit, [data-testid="stStatusWidget"],
 [data-testid="stDecoration"], [data-testid="stToolbar"],
-[data-testid="stAppViewContainer"] footer,
-[data-testid="stBottomLeftBadge"], [data-testid="stDecorationContainer"],
-[data-testid="stLogo"], .stDeployButton, .stAppFooter,
-a[href*="streamlit.io"], div:has(> .viewerBadge_link) {
-    display: none !important;
-}
-
-/* ✅ Streamlit Cloud 모바일 푸터 숨김 (강제 오버라이드) */
-footer, [class*="stActionButton"], [class*="stAppFooter"], [class*="viewerBadgeLink"] {
+[data-testid="stDecorationContainer"], [data-testid="stAppFooter"],
+a[href*="streamlit.io"], div:has(> .viewerBadge_link),
+section[data-testid="stSidebar"] + div > div:has(a[href*="streamlit.io"]) {
     display: none !important;
     visibility: hidden !important;
-    height: 0px !important;
+    height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
 }
 
-/* ✅ 앱 전체 여백 및 배경 조정 */
+/* --- iFrame 내부 뱃지 요소 제거 (모바일용) --- */
+iframe {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0px !important;
+}
+
+/* --- 전체 여백 및 배경 조정 --- */
 .appview-container .main .block-container {
     padding-top: 0.5rem !important;
 }
@@ -55,21 +56,30 @@ footer, [class*="stActionButton"], [class*="stAppFooter"], [class*="viewerBadgeL
     }
 }
 
-/* ✅ 폰트 및 배경 색상 통일 */
+/* --- 폰트 및 배경 색상 통일 --- */
 html, body, [class*="css"] {
     font-family: 'Noto Sans KR', sans-serif;
     background-color: #fffaf0;
 }
 
-/* ✅ 모바일 브라우저에서 전체 높이 확보 */
+/* --- 스크롤 동작 및 overscroll 제어 --- */
 html, body {
     height: 100%;
     overflow-x: hidden;
     overscroll-behavior: none;
 }
 </style>
+<script>
+/* ✅ 추가: JS로 Shadow DOM 내부의 Streamlit 배지 완전 제거 */
+window.addEventListener('load', () => {
+    const observer = new MutationObserver(() => {
+        const badges = document.querySelectorAll('[data-testid="stDecoration"], .viewerBadgeLink--streamlit, iframe');
+        badges.forEach(b => b.remove());
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>
 """, unsafe_allow_html=True)
-
 
 
 # ------------------------------------------------
@@ -266,5 +276,6 @@ st.markdown(cards_html, unsafe_allow_html=True)
 # ------------------------------------------------
 st.markdown("---")
 st.caption("💡 상단 스크롤 네비게이션으로 페이지를 선택하세요. (모바일: 손가락으로 좌우 스크롤 가능)")
+
 
 
