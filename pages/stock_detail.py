@@ -16,7 +16,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="📈 종목 상세", layout="wide")
 
 # ------------------------------------------------
-# 세션 상태에서 선택 종목 불러오기
+# 세션 상태 확인
 # ------------------------------------------------
 if "selected_code" not in st.session_state:
     st.warning("⚠️ 선택된 종목이 없습니다. 메인 페이지에서 종목을 선택하세요.")
@@ -32,28 +32,33 @@ st.title(f"📈 {name} ({code}) 상세 차트")
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_prices(code):
+    """prices 테이블에서 최대 5000개 데이터 로드"""
     res = (
         supabase.table("prices")
         .select("날짜, 종가")
         .eq("종목코드", code)
         .order("날짜", desc=False)
+        .range(0, 4999)  # ✅ 최대 5000개까지 가져오기
         .execute()
     )
     df = pd.DataFrame(res.data)
     if not df.empty:
-        # ✅ 2025년 데이터 포함되도록 명시적 변환
+        # ✅ 명시적으로 날짜 변환 (2025년 데이터 포함)
         df["날짜"] = pd.to_datetime(df["날짜"], format="%Y%m%d", errors="coerce")
         df = df.dropna(subset=["날짜"])
         df["종가"] = df["종가"].astype(float)
     return df
 
+
 @st.cache_data(ttl=300)
 def load_b_points(code):
+    """low_after_b 테이블에서 B 포인트 로드"""
     res = (
         supabase.table("low_after_b")
         .select("구분, b가격, 발생일")
         .eq("종목코드", code)
         .order("발생일", desc=True)
+        .range(0, 999)  # ✅ B포인트도 최대 1000개까지
         .execute()
     )
     df = pd.DataFrame(res.data)
@@ -69,7 +74,7 @@ df_price = load_prices(code)
 df_bpoints = load_b_points(code)
 
 if df_price.empty:
-    st.warning("가격 데이터가 없습니다.")
+    st.warning("⚠️ 가격 데이터가 없습니다.")
     st.stop()
 
 # ------------------------------------------------
@@ -77,7 +82,7 @@ if df_price.empty:
 # ------------------------------------------------
 fig = go.Figure()
 
-# 종가 라인
+# ✅ 종가 라인
 fig.add_trace(
     go.Scatter(
         x=df_price["날짜"],
@@ -88,7 +93,7 @@ fig.add_trace(
     )
 )
 
-# ✅ B 포인트 수평선 표시
+# ✅ B 포인트 수평선
 if not df_bpoints.empty:
     for _, row in df_bpoints.iterrows():
         fig.add_hline(
@@ -100,7 +105,7 @@ if not df_bpoints.empty:
         )
 
 # ------------------------------------------------
-# 레이아웃 설정
+# 차트 레이아웃
 # ------------------------------------------------
 fig.update_layout(
     title=f"{name} ({code}) 주가 차트",
@@ -112,7 +117,7 @@ fig.update_layout(
     showlegend=False,
 )
 
-# ✅ x축 자동확장 (2025 포함)
+# ✅ X축 전체 표시 (2025년 포함)
 if not df_price.empty:
     fig.update_xaxes(range=[df_price["날짜"].min(), df_price["날짜"].max()])
 
@@ -120,6 +125,5 @@ if not df_price.empty:
 # 출력
 # ------------------------------------------------
 st.plotly_chart(fig, use_container_width=True)
-
 st.markdown("---")
-st.caption("📊 수평선은 B가격을 의미하며, 발생일 기준으로 표시됩니다.")
+st.caption("📊 수평선은 각 B가격을 의미하며, 발생일 기준으로 표시됩니다.")
