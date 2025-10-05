@@ -16,75 +16,70 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 
 # ------------------------------------------------
-# 스크롤 가능한 네비게이션 바 (Streamlit 버튼 + 내부 이동)
+# 상단 스크롤형 한글 네비게이션 바
 # ------------------------------------------------
 st.markdown("""
 <style>
-.scroll-container {
+.scroll-nav {
     display: flex;
     overflow-x: auto;
     white-space: nowrap;
-    padding: 6px 4px;
-    gap: 10px;
-    margin-top: -8px;
-    margin-bottom: 10px;
+    gap: 12px;
+    padding: 6px 8px;
+    margin-top: -5px;
+    margin-bottom: 14px;
     scrollbar-width: thin;
-    scrollbar-color: #bbb transparent;
+    scrollbar-color: #ccc transparent;
 }
-.scroll-container::-webkit-scrollbar {
+.scroll-nav::-webkit-scrollbar {
     height: 6px;
 }
-.scroll-container::-webkit-scrollbar-thumb {
+.scroll-nav::-webkit-scrollbar-thumb {
     background-color: #bbb;
-    border-radius: 3px;
+    border-radius: 4px;
 }
-.scroll-item {
-    flex: 0 0 auto;
+.scroll-nav::-webkit-scrollbar-track {
+    background: transparent;
 }
-.stButton>button {
-    border-radius: 10px;
+.icon-btn {
+    display: inline-block;
+    background: #fff;
     border: 1px solid #ddd;
-    background-color: white;
-    color: #333;
+    border-radius: 10px;
+    padding: 6px 14px;
     font-size: 13px;
     font-weight: 600;
-    padding: 6px 14px;
+    text-decoration: none;
+    color: #333;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     transition: all 0.2s ease;
 }
-.stButton>button:hover {
-    background-color: #ffe9c4;
+.icon-btn:hover {
+    transform: scale(1.05);
+    background: #ffe9c4;
     border-color: #f0b400;
     color: #b35a00;
-    transform: scale(1.05);
 }
 @media (max-width: 768px) {
-    .stButton>button {
+    .icon-btn {
         font-size: 12px;
-        padding: 6px 10px;
+        padding: 6px 12px;
     }
 }
 </style>
+
+<div class="scroll-nav">
+    <a href="?page=국내눌림" class="icon-btn">메인</a>
+    <a href="?page=국내눌림" class="icon-btn">🟠 국내 눌림</a>
+    <a href="?page=국내추격" class="icon-btn">🔵 국내 추격</a>
+    <a href="?page=해외눌림" class="icon-btn">🟢 해외 눌림</a>
+    <a href="?page=해외추격" class="icon-btn">🔴 해외 추격</a>
+</div>
 """, unsafe_allow_html=True)
 
-# 버튼 구성
-nav_items = [
-    ("🟠 국내 눌림", "pages/국내눌림.py"),
-    ("🔵 국내 추격", "pages/국내추격.py"),
-    ("🟢 해외 눌림", "pages/해외눌림.py"),
-    ("🔴 해외 추격", "pages/해외추격.py"),
-]
-
-# 버튼을 스크롤 가능한 div 안에 배치
-st.markdown('<div class="scroll-container">', unsafe_allow_html=True)
-cols = st.columns(len(nav_items))
-for i, (label, path) in enumerate(nav_items):
-    with cols[i]:
-        if st.button(label, key=f"nav_{i}", use_container_width=True):
-            st.switch_page(path)
-st.markdown('</div>', unsafe_allow_html=True)
-
 # ------------------------------------------------
-# 타이틀
+# 페이지 타이틀
 # ------------------------------------------------
 st.markdown("<h4 style='text-align:center; margin-bottom:0;'>💹 스윙 종목 TOP5 대시보드</h4>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:13px; color:gray; margin-top:2px;'>카테고리를 선택하여 세부 페이지로 이동하세요.</p>", unsafe_allow_html=True)
@@ -127,14 +122,18 @@ foreign_bottom5 = pd.DataFrame({
 })
 
 # ------------------------------------------------
-# 카드 스타일
+# 카드 CSS
 # ------------------------------------------------
 st.markdown("""
 <style>
+body, div, p {
+    font-family: 'Noto Sans KR', sans-serif;
+}
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 16px;
+    width: 100%;
 }
 .card {
     background: linear-gradient(135deg, #fff8cc, #ffd966);
@@ -151,8 +150,8 @@ st.markdown("""
     font-size: 15px;
     font-weight: 800;
     color: #b35a00;
-    text-align: center;
     margin-bottom: 8px;
+    text-align: center;
 }
 .card-item {
     font-size: 13px;
@@ -172,6 +171,12 @@ st.markdown("""
     .dashboard-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    .card {
+        padding: 10px;
+    }
+    .card-item {
+        font-size: 12px;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -187,7 +192,7 @@ def make_card(title, df):
     return html
 
 # ------------------------------------------------
-# 카드 표시
+# 카드 4개 표시
 # ------------------------------------------------
 cards_html = f"""
 <div class='dashboard-grid'>
@@ -203,4 +208,4 @@ st.markdown(cards_html, unsafe_allow_html=True)
 # 하단 안내
 # ------------------------------------------------
 st.markdown("---")
-st.caption("💡 상단 스크롤 네비게이션 바를 이용해 페이지를 이동할 수 있습니다. (모바일은 손가락으로 좌우 스크롤 가능)")
+st.caption("💡 상단 스크롤 네비게이션으로 페이지를 선택하세요. (모바일: 손가락으로 좌우 스크롤 가능)")
