@@ -29,7 +29,7 @@ def load_returns(limit=None):
 # 페이지 설정
 # ------------------------------------------------
 st.set_page_config(page_title="스윙 종목", layout="wide")
-st.subheader("💹 스윙 종목 대시보드")
+st.title("💹 스윙 종목 대시보드")
 
 # ------------------------------------------------
 # 데이터 로드
@@ -61,37 +61,40 @@ df["발생일종가(원)"] = df["발생일종가"].map("{:,.0f}".format)
 if not show_all:
     st.subheader("🏆 수익률 상위 5개 종목")
 
-    # 막대그래프 (Plotly)
+    # ✅ 수익률 내림차순 정렬 (1등이 위로)
+    df_sorted = df.sort_values("수익률", ascending=False)
+
+    # ✅ Plotly 막대그래프
     fig = px.bar(
-        df.sort_values("수익률", ascending=True),
+        df_sorted,
         x="수익률",
         y="종목명",
         orientation="h",
-        text=df["수익률"].map("{:.2f}%".format),
+        text=df_sorted["수익률"].map("{:.2f}%".format),
         color="수익률",
         color_continuous_scale="Agsunset",
     )
 
-    # 불필요한 축 제목 제거 + 디자인 조정
+    # ✅ 그래프 디자인 조정
     fig.update_layout(
         xaxis_title=None,   # "수익률" 숨김
         yaxis_title=None,   # "종목명" 숨김
         coloraxis_showscale=False,
-        height=400,
-        margin=dict(l=20, r=20, t=20, b=20),
+        height=300,         # 그래프 높이 축소
+        margin=dict(l=40, r=20, t=20, b=20),
     )
 
-    # 수익률 수치 표시 스타일
     fig.update_traces(
         textposition="outside",
+        textfont=dict(size=12),
         hovertemplate="<b>%{y}</b><br>수익률: %{x:.2f}%"
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # 카드형 정보 출력
+    # ✅ 카드형 정보 출력
     st.markdown("---")
-    for i, row in df.iterrows():
+    for i, row in df_sorted.iterrows():
         st.markdown(
             f"""
             ### 🥇 {i+1}. **{row['종목명']} ({row['종목코드']})**
