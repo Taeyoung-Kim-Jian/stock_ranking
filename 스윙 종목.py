@@ -61,38 +61,42 @@ df["발생일종가(원)"] = df["발생일종가"].map("{:,.0f}".format)
 if not show_all:
     st.subheader("🏆 수익률 상위 5개 종목")
 
-    # ✅ 수익률 내림차순 정렬 (1등이 위)
+    # ✅ 수익률 높은 순 정렬 (1등이 위쪽)
     df_sorted = df.sort_values("수익률", ascending=False)
 
     # ✅ Plotly 막대그래프
     fig = px.bar(
         df_sorted,
         x="수익률",
-        y="종목명",
+        y=df_sorted.index,  # y축은 인덱스 (숨김용)
         orientation="h",
         color="수익률",
         color_continuous_scale="Agsunset",
     )
 
-    # ✅ 텍스트: 종목명 + 수익률(%)
+    # ✅ 막대 내부 왼쪽 정렬 텍스트 (종목명 + 수익률)
     fig.update_traces(
-        text=df_sorted.apply(lambda r: f"{r['종목명']} ({r['수익률']:.2f}%)", axis=1),
+        text=df_sorted.apply(lambda r: f"{r['종목명']}  {r['수익률']:.2f}%", axis=1),
         textposition="inside",
-        insidetextanchor="middle",
-        textfont=dict(color="white", size=12),
-        hovertemplate="<b>%{y}</b><br>수익률: %{x:.2f}%"
+        insidetextanchor="start",  # 왼쪽 정렬
+        textfont=dict(color="white", size=16, family="Arial Black"),
+        hovertemplate="<b>%{text}</b><extra></extra>",
     )
 
-    # ✅ 그래프 디자인 (높이 축소 + 축 제목 제거 + 정렬)
+    # ✅ 그래프 디자인 (y축 제거, 높이 축소)
     fig.update_layout(
         xaxis_title=None,
         yaxis_title=None,
-        coloraxis_showscale=False,
-        height=320,
-        margin=dict(l=40, r=40, t=20, b=20),
         yaxis=dict(
-            categoryorder="total ascending"  # 수익률 높은 순서대로 위쪽
+            showticklabels=False,   # y축 종목명 제거
+            showgrid=False
         ),
+        xaxis=dict(showgrid=False),
+        coloraxis_showscale=False,
+        height=300,
+        margin=dict(l=20, r=20, t=20, b=20),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
     )
 
     st.plotly_chart(fig, use_container_width=True)
