@@ -41,9 +41,7 @@ def load_prices(code):
     )
     df = pd.DataFrame(res.data)
     if not df.empty:
-        # ✅ 2025년 데이터 포함되도록 명시적 변환
-        df["날짜"] = pd.to_datetime(df["날짜"], format="%Y%m%d", errors="coerce")
-        df = df.dropna(subset=["날짜"])
+        df["날짜"] = pd.to_datetime(df["날짜"])
         df["종가"] = df["종가"].astype(float)
     return df
 
@@ -58,7 +56,7 @@ def load_b_points(code):
     )
     df = pd.DataFrame(res.data)
     if not df.empty:
-        df["발생일"] = pd.to_datetime(df["발생일"], errors="coerce")
+        df["발생일"] = pd.to_datetime(df["발생일"])
         df["b가격"] = df["b가격"].astype(float)
     return df
 
@@ -84,42 +82,35 @@ fig.add_trace(
         y=df_price["종가"],
         mode="lines",
         name="종가",
-        line=dict(color="royalblue", width=2),
+        line=dict(color="lightblue", width=2),
     )
 )
 
-# ✅ B 포인트 수평선 표시
+# B 포인트 표시
 if not df_bpoints.empty:
     for _, row in df_bpoints.iterrows():
-        fig.add_hline(
-            y=row["b가격"],
-            line=dict(color="red", width=1.8, dash="dot"),
-            annotation_text=f"B({row['구분']})",
-            annotation_position="right",
-            annotation_font=dict(color="red", size=12),
+        fig.add_trace(
+            go.Scatter(
+                x=[row["발생일"]],
+                y=[row["b가격"]],
+                mode="markers+text",
+                name=f"B({row['구분']})",
+                text=row["구분"],
+                textposition="top center",
+                marker=dict(color="red", size=9, symbol="diamond"),
+            )
         )
 
-# ------------------------------------------------
-# 레이아웃 설정
-# ------------------------------------------------
 fig.update_layout(
-    title=f"{name} ({code}) 주가 차트",
     height=700,
     xaxis_title="날짜",
-    yaxis_title="가격 (₩)",
+    yaxis_title="가격",
     template="plotly_white",
-    margin=dict(l=30, r=30, t=50, b=30),
+    margin=dict(l=20, r=20, t=40, b=20),
     showlegend=False,
 )
 
-# ✅ x축 자동확장 (2025 포함)
-if not df_price.empty:
-    fig.update_xaxes(range=[df_price["날짜"].min(), df_price["날짜"].max()])
-
-# ------------------------------------------------
-# 출력
-# ------------------------------------------------
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
-st.caption("📊 수평선은 B가격을 의미하며, 발생일 기준으로 표시됩니다.")
+st.caption("📊 차트에는 최근 종가 흐름과 B 포인트가 함께 표시됩니다.")
