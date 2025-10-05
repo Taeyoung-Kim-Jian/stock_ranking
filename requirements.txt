@@ -4,6 +4,8 @@ supabase
 streamlit-aggrid
 plotly
 streamlit-js-eval
+matplotlib    
+
 
 
 
