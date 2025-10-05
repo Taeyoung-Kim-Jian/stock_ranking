@@ -36,7 +36,6 @@ def load_prices(code):
     """Supabase에서 최대 5000개까지 prices 데이터 불러오기"""
     all_data = []
     chunk_size = 1000
-
     for i in range(0, 5000, chunk_size):
         res = (
             supabase.table("prices")
@@ -53,7 +52,7 @@ def load_prices(code):
     df = pd.DataFrame(all_data)
     if not df.empty:
         df["날짜"] = df["날짜"].astype(str)
-        # 날짜 포맷 자동 인식 (YYYYMMDD 또는 YYYY-MM-DD)
+        # 날짜 자동 인식
         if df["날짜"].str.match(r"^\d{8}$").any():
             df["날짜"] = pd.to_datetime(df["날짜"], format="%Y%m%d", errors="coerce")
         else:
@@ -102,24 +101,21 @@ fig.add_trace(
         y=df_price["종가"],
         mode="lines",
         name="종가",
-        line=dict(color="lightblue", width=2),
+        line=dict(color="royalblue", width=2),
     )
 )
 
-# ✅ B 포인트 표시
+# ✅ B 포인트 수평선 (실선)
 if not df_bpoints.empty:
     for _, row in df_bpoints.iterrows():
-        fig.add_trace(
-            go.Scatter(
-                x=[row["발생일"]],
-                y=[row["b가격"]],
-                mode="markers+text",
-                name=f"B({row['구분']})",
-                text=row["구분"],
-                textposition="top center",
-                marker=dict(color="red", size=9, symbol="diamond"),
+        if pd.notna(row["b가격"]):
+            fig.add_hline(
+                y=row["b가격"],
+                line=dict(color="red", width=2, dash="solid"),  # ✅ 실선
+                annotation_text=f"B({row['구분']})",
+                annotation_position="right",
+                annotation_font=dict(color="red", size=12, family="Arial Black"),
             )
-        )
 
 # ------------------------------------------------
 # 차트 설정
@@ -127,7 +123,7 @@ if not df_bpoints.empty:
 fig.update_layout(
     height=700,
     xaxis_title="날짜",
-    yaxis_title="가격",
+    yaxis_title="가격 (₩)",
     template="plotly_white",
     margin=dict(l=20, r=20, t=40, b=20),
     showlegend=False,
@@ -143,4 +139,4 @@ if not df_price.empty:
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
-st.caption("📊 차트에는 최근 종가 흐름과 B 포인트가 함께 표시됩니다.")
+st.caption("📊 붉은 수평선은 각 B가격을 의미합니다. (구분: B0, B1, B2 …)")
