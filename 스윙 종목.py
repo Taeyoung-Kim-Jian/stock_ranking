@@ -16,39 +16,53 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 
 # ------------------------------------------------
-# 상단 아이콘 네비게이션 바 (최상단)
+# 상단 한글 아이콘 네비게이션 바 (최상단)
 # ------------------------------------------------
 st.markdown("""
 <style>
 .icon-nav {
     display: flex;
     justify-content: center;
-    gap: 25px;
-    margin-bottom: 12px;
+    gap: 22px;
+    margin-top: -10px;
+    margin-bottom: 10px;
 }
 .icon-btn {
+    display: inline-block;
+    background: #fefefe;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
     text-decoration: none;
-    font-size: 28px;
-    transition: transform 0.2s ease;
+    color: #333;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
 }
 .icon-btn:hover {
-    transform: scale(1.25);
+    transform: scale(1.05);
+    background: #ffe9c4;
+    border-color: #f0b400;
+    color: #b35a00;
 }
 @media (max-width: 768px) {
     .icon-nav {
-        gap: 18px;
+        gap: 14px;
+        flex-wrap: wrap;
     }
     .icon-btn {
-        font-size: 26px;
+        font-size: 12px;
+        padding: 6px 10px;
     }
 }
 </style>
 
 <div class="icon-nav">
-    <a href="?page=국내눌림" class="icon-btn" title="국내 눌림">🇰🇷📉</a>
-    <a href="?page=국내추격" class="icon-btn" title="국내 추격">🇰🇷🚀</a>
-    <a href="?page=해외눌림" class="icon-btn" title="해외 눌림">🌎📉</a>
-    <a href="?page=해외추격" class="icon-btn" title="해외 추격">🌎🚀</a>
+    <a href="?page=국내눌림" class="icon-btn">🟠 국내 눌림</a>
+    <a href="?page=국내추격" class="icon-btn">🔵 국내 추격</a>
+    <a href="?page=해외눌림" class="icon-btn">🟢 해외 눌림</a>
+    <a href="?page=해외추격" class="icon-btn">🔴 해외 추격</a>
 </div>
 """, unsafe_allow_html=True)
 
@@ -96,7 +110,7 @@ foreign_bottom5 = pd.DataFrame({
 })
 
 # ------------------------------------------------
-# CSS
+# CSS (카드 디자인)
 # ------------------------------------------------
 st.markdown("""
 <style>
@@ -143,7 +157,7 @@ body, div, p {
 }
 @media (max-width: 768px) {
     .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr); /* ✅ 모바일에서도 2단 유지 */
+        grid-template-columns: repeat(2, 1fr);
     }
     .card {
         padding: 10px;
@@ -170,10 +184,10 @@ def make_card(title, df):
 # ------------------------------------------------
 cards_html = f"""
 <div class='dashboard-grid'>
-    {make_card("🇰🇷 국내 눌림 상위 TOP5", domestic_top5)}
-    {make_card("🇰🇷 국내 눌림 하위 TOP5", domestic_bottom5)}
-    {make_card("🌎 해외 성장 상위 TOP5", foreign_top5)}
-    {make_card("🌎 해외 성장 하위 TOP5", foreign_bottom5)}
+    {make_card("🟠 국내 눌림 상위 TOP5", domestic_top5)}
+    {make_card("🟠 국내 눌림 하위 TOP5", domestic_bottom5)}
+    {make_card("🟢 해외 성장 상위 TOP5", foreign_top5)}
+    {make_card("🟢 해외 성장 하위 TOP5", foreign_bottom5)}
 </div>
 """
 st.markdown(cards_html, unsafe_allow_html=True)
@@ -182,4 +196,4 @@ st.markdown(cards_html, unsafe_allow_html=True)
 # 하단 안내
 # ------------------------------------------------
 st.markdown("---")
-st.caption("💡 상단 아이콘을 눌러 각 카테고리 상세 페이지로 이동할 수 있습니다. (PC: 4단 / 모바일: 2단 자동 조정)")
+st.caption("💡 상단 한글형 아이콘 버튼을 눌러 각 카테고리 상세 페이지로 이동할 수 있습니다.")
