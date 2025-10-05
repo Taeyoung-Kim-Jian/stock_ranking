@@ -99,7 +99,7 @@ if not show_all:
     fig = px.bar(
         df_sorted,
         x="수익률",
-        y="종목명",  # 종목명을 y축으로
+        y="종목명",
         orientation="h",
         color="수익률",
         color_continuous_scale="Agsunset",
@@ -121,16 +121,15 @@ if not show_all:
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
 
-    # ✅ 그래프 레이아웃: 수익률 1등이 위로 오도록
+    # ✅ 그래프 레이아웃: 1등이 위 + xy축 완전 제거
     fig.update_layout(
-        xaxis_title=None,
-        yaxis_title=None,
+        xaxis=dict(visible=False),  # x축 제거
         yaxis=dict(
+            visible=False,           # y축 제거
             categoryorder="array",
-            categoryarray=list(df_sorted["종목명"]),  # 데이터 순서 유지
-            autorange="reversed"  # 🔹 역순으로 (1등이 위)
+            categoryarray=list(df_sorted["종목명"]),
+            autorange="reversed",    # 1등이 위
         ),
-        xaxis=dict(showgrid=False),
         coloraxis_showscale=False,
         height=320,
         margin=dict(l=20, r=20, t=20, b=20),
