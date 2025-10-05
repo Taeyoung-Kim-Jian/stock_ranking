@@ -64,8 +64,6 @@ if not show_all:
     # 막대그래프 (Plotly)
     fig = px.bar(
         df.sort_values("수익률", ascending=True),
-        x="수익률",
-        y="종목명",
         orientation="h",
         text=df["수익률"].map("{:.2f}%".format),
         color="수익률",
@@ -118,4 +116,5 @@ else:
 
 st.markdown("---")
 st.caption("💡 상위 5개는 수익률 순 정렬 기준이며, 전체 보기에서 모든 종목을 확인할 수 있습니다.")
+
 
