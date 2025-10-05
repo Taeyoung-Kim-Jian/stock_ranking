@@ -120,7 +120,7 @@ st.markdown('<div class="section-container">', unsafe_allow_html=True)
 st.markdown('<div class="section">', unsafe_allow_html=True)
 st.markdown('<div class="section-title">📈 수익률 상위 5개 (눌림형)</div>', unsafe_allow_html=True)
 for i, row in df_top5.iterrows():
-    if st.button(f"{i+1}. {row['종목명']}) — {row['수익률']:.2f}%", key=f"top_{row['종목코드']}"):
+    if st.button(f"{i+1}. {row['종목명']} — {row['수익률']:.2f}%", key=f"top_{row['종목코드']}"):
         st.session_state.selected_code = row["종목코드"]
         st.session_state.selected_name = row["종목명"]
         st.switch_page("pages/stock_detail.py")
@@ -130,7 +130,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="section">', unsafe_allow_html=True)
 st.markdown('<div class="section-title">📉 수익률 하위 5개 (추격형)</div>', unsafe_allow_html=True)
 for i, row in df_bottom5.iterrows():
-    if st.button(f"{i+1}. {row['종목명']}) — {row['수익률']:.2f}%", key=f"bottom_{row['종목코드']}"):
+    if st.button(f"{i+1}. {row['종목명']} — {row['수익률']:.2f}%", key=f"bottom_{row['종목코드']}"):
         st.session_state.selected_code = row["종목코드"]
         st.session_state.selected_name = row["종목명"]
         st.switch_page("pages/stock_detail.py")
@@ -153,4 +153,5 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption("📱 모바일에서도 좌우로 자동 정렬되며, 클릭 시 차트로 이동합니다.")
+
 
