@@ -13,7 +13,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ------------------------------------------------
 # 페이지 설정
 # ------------------------------------------------
-st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
+st.set_page_config(page_title="스윙 종목", layout="wide")
 st.markdown("<h3 style='text-align:center; margin-bottom:10px;'>💹 스윙 종목 대시보드</h3>", unsafe_allow_html=True)
 
 # ------------------------------------------------
@@ -162,3 +162,4 @@ with cols[2]:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.caption("📱 PC와 모바일 모두 좌우 2단 구조로 고정되어 표시됩니다.")
+
