@@ -3,10 +3,10 @@ import streamlit as st
 import pandas as pd
 import os
 from supabase import create_client
-import matplotlib.pyplot as plt
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # ------------------------------------------------
-# 페이지 설정11
+# 페이지 설정
 # ------------------------------------------------
 st.set_page_config(page_title="📆 월별 성과", layout="wide")
 
@@ -21,7 +21,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    st.error("❌ Supabase 환경변수(SUPABASE_URL, SUPABASE_KEY)가 설정되지 않았습니다.")
+    st.error("❌ Supabase 환경변수가 설정되지 않았습니다.")
     st.stop()
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -34,17 +34,24 @@ def load_monthly_data():
     try:
         res = supabase.table("b_zone_monthly_tracking").select("*").order("월구분", desc=True).execute()
         df = pd.DataFrame(res.data)
+
         if df.empty:
             return df
 
-        # 월 포맷 추가
-        df["월포맷"] = pd.to_datetime(df["월구분"]).dt.strftime("%y.%m")
+        # ✅ 월 구분
+        df["월포맷"] = pd.to_datetime(df["월구분"], errors="coerce").dt.strftime("%y.%m")
+        df = df[df["월포맷"].notna()]
 
-        # NaN 제거
+        # ✅ NaN 처리 및 수익률 재계산
         df = df.fillna(0)
-
-        # ✅ 측정일대비수익률 재계산 (측정일 종가 대비 현재가)
         df["측정일대비수익률"] = ((df["현재가"] - df["측정일종가"]) / df["측정일종가"] * 100).round(2)
+
+        # ✅ 컬럼 정리
+        display_cols = [
+            "종목명", "종목코드", "b가격", "측정일", "측정일종가",
+            "현재가", "측정일대비수익률", "최고수익률", "최저수익률", "월포맷"
+        ]
+        df = df[[col for col in display_cols if col in df.columns]]
         return df
 
     except Exception as e:
@@ -63,9 +70,8 @@ if df.empty:
 
 st.success(f"✅ 총 {len(df)}건의 데이터 불러옴")
 
-
 # ------------------------------------------------
-# 월별 탭
+# 월별 탭 표시
 # ------------------------------------------------
 months = sorted(df["월포맷"].unique(), reverse=True)
 tabs = st.tabs(months)
@@ -73,27 +79,48 @@ tabs = st.tabs(months)
 for i, month in enumerate(months):
     with tabs[i]:
         st.subheader(f"📅 {month}월 성과")
-        df_month = df[df["월포맷"] == month].copy()
 
-        # 정렬: 수익률 높은 순
+        df_month = df[df["월포맷"] == month].copy()
         df_month = df_month.sort_values("측정일대비수익률", ascending=False)
 
+        # ------------------------------------------------
+        # AgGrid 설정
+        # ------------------------------------------------
         display_cols = [
-            "종목명", "b가격", "측정일", "측정일종가", "현재가",
-            "측정일대비수익률", "최고수익률", "최저수익률"
+            "종목명", "종목코드", "b가격", "측정일", "측정일종가",
+            "현재가", "측정일대비수익률", "최고수익률", "최저수익률"
         ]
 
-        # 숫자 포맷 적용
-        st.dataframe(
-            df_month[display_cols].style.format({
-                "b가격": "{:,.0f}",
-                "측정일종가": "{:,.0f}",
-                "현재가": "{:,.0f}",
-                "측정일대비수익률": "{:.2f}%",
-                "최고수익률": "{:.2f}%",
-                "최저수익률": "{:.2f}%"
-            })
+        gb = GridOptionsBuilder.from_dataframe(df_month[display_cols])
+        gb.configure_default_column(resizable=True, sortable=True, filter=True)
+        gb.configure_selection(selection_mode="single", use_checkbox=False)
+        grid_options = gb.build()
+
+        grid_response = AgGrid(
+            df_month[display_cols],
+            gridOptions=grid_options,
+            enable_enterprise_modules=False,
+            update_mode=GridUpdateMode.SELECTION_CHANGED,
+            theme="streamlit",
+            fit_columns_on_grid_load=True,
+            height=500,
         )
 
+        selected = grid_response.get("selected_rows")
+
+        # ------------------------------------------------
+        # 클릭 시 차트 페이지로 이동
+        # ------------------------------------------------
+        if selected:
+            selected_row = selected[0]
+            stock_name = selected_row["종목명"]
+            stock_code = selected_row["종목코드"]
+
+            st.session_state["selected_stock_name"] = stock_name
+            st.session_state["selected_stock_code"] = stock_code
+
+            st.success(f"✅ {stock_name} ({stock_code}) 차트 페이지로 이동 중...")
+            st.switch_page("pages/stock_detail.py")
+
 st.markdown("---")
-st.caption("💡 수익률은 측정일 종가 대비 현재가 기준으로 계산됩니다.")
+st.caption("💡 행을 클릭하면 해당 종목의 차트 페이지로 이동합니다.")
