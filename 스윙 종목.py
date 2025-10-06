@@ -22,7 +22,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 
 # ------------------------------------------------
-# ✅ 상단 스크롤 네비게이션
+# ✅ 상단 네비게이션
 # ------------------------------------------------
 st.markdown("""
 <style>
@@ -91,18 +91,22 @@ st.markdown("<p style='text-align:center; font-size:13px; color:gray; margin-top
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로딩 (total_return 테이블 사용)
+# 데이터 로딩 (종목명, 수익률만 불러오기)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_returns():
-    query = (
-        supabase.table("total_return")
-        .select("종목명, 종목코드, 수익률, 발생일, 구분")
-        .order("수익률", desc=True)
-        .limit(5000)
-    )
-    res = query.execute()
-    return pd.DataFrame(res.data)
+    try:
+        query = (
+            supabase.table("total_return")
+            .select("종목명, 수익률")
+            .order("수익률", desc=True)
+            .limit(5000)
+        )
+        res = query.execute()
+        return pd.DataFrame(res.data)
+    except Exception as e:
+        st.error(f"❌ Supabase 쿼리 오류 발생: {e}")
+        return pd.DataFrame()
 
 df_all = load_returns()
 if df_all.empty:
