@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 import os
 from supabase import create_client
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # ------------------------------------------------
 # Supabase 연결
@@ -23,7 +22,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="투자 적정 종목", layout="wide")
 
 st.markdown("<h4 style='text-align:center;'>💰 투자 적정 구간 종목 리스트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>현재가격이 b가격 ±5% 이내인 종목입니다. 행을 클릭하면 차트로 이동합니다.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>현재가격이 b가격 ±5% 이내인 종목입니다. 클릭하면 차트 페이지로 이동합니다.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
@@ -55,36 +54,67 @@ if df.empty:
     st.stop()
 
 # ------------------------------------------------
-# AgGrid 설정
+# CSS 스타일 (테이블을 예쁘게)
 # ------------------------------------------------
-gb = GridOptionsBuilder.from_dataframe(df)
-gb.configure_default_column(resizable=True, sortable=True, filter=True)
-gb.configure_selection(selection_mode="single", use_checkbox=False)
-gb.configure_grid_options(domLayout='normal')
-grid_options = gb.build()
-
-grid_response = AgGrid(
-    df,
-    gridOptions=grid_options,
-    enable_enterprise_modules=False,
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-    theme="streamlit",
-    fit_columns_on_grid_load=True,
-    height=600,
-)
-
-selected = grid_response.get("selected_rows")
+st.markdown("""
+<style>
+.table-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 10px;
+}
+.stock-card {
+    background: linear-gradient(145deg, #ffffff, #f8f8f8);
+    border: 1px solid #e6e6e6;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+.stock-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.stock-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 6px;
+}
+.stock-info {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #444;
+}
+.stock-info span {
+    float: right;
+    font-weight: 600;
+}
+.positive { color: #d32f2f; }
+.negative { color: #1976d2; }
+</style>
+""", unsafe_allow_html=True)
 
 # ------------------------------------------------
-# 행 클릭 시 차트 페이지로 이동
+# 카드형 테이블 렌더링
 # ------------------------------------------------
-if selected is not None and len(selected) > 0:
-    selected_row = selected.iloc[0]
-    stock_name = selected_row["종목명"]
-    st.session_state["selected_stock"] = stock_name
+st.markdown("<div class='table-container'>", unsafe_allow_html=True)
 
-    st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
-    st.switch_page("pages/stock_detail.py")
+for _, row in df.iterrows():
+    color_class = "positive" if row["변동률"] > 0 else "negative"
+    html = f"""
+    <div class='stock-card' onclick="window.location.href='/stock_detail'">
+        <div class='stock-name'>{row['종목명']}</div>
+        <div class='stock-info'>b가격 <span>{row['b가격']:,}원</span></div>
+        <div class='stock-info'>현재가격 <span>{row['현재가격']:,}원</span></div>
+        <div class='stock-info'>변동률 <span class='{color_class}'>{row['변동률']:.2f}%</span></div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption("💡 b가격 ±5% 구간에 위치한 종목은 매수/매도 균형 구간으로 해석할 수 있습니다.")
