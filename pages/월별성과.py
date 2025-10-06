@@ -27,6 +27,23 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ------------------------------------------------
+# 안전 변환 함수 (NaN / Decimal / Timestamp 처리)
+# ------------------------------------------------
+def safe_convert(df):
+    df = df.fillna("")
+    for c in df.columns:
+        # 날짜형 → 문자열 변환
+        if "날짜" in c or c == "월구분":
+            df[c] = df[c].astype(str)
+        else:
+            # 숫자형 변환 (NaN, Inf 방지)
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+            df[c] = df[c].replace([float("inf"), float("-inf")], 0).fillna(0).astype(float)
+    # numpy.float64 → Python 기본 float 변환
+    df = df.applymap(lambda x: x.item() if hasattr(x, "item") else x)
+    return df
+
+# ------------------------------------------------
 # 데이터 로드 함수
 # ------------------------------------------------
 @st.cache_data(ttl=600)
@@ -65,22 +82,13 @@ for i, month in enumerate(months):
         st.subheader(f"📅 {month}월 성과")
         df_month = df[df["월포맷"] == month].copy()
 
-        # NaN, Decimal, Timestamp 변환 처리
-        df_month = df_month.fillna("")
-        for col in df_month.columns:
-            # 날짜형 → 문자열
-            if "날짜" in col or col == "월구분":
-                df_month[col] = df_month[col].astype(str)
-            # 숫자형 변환
-            elif "수익률" in col or col in ["b가격", "현재가", "측정일종가"]:
-                df_month[col] = pd.to_numeric(df_month[col], errors="coerce").fillna(0).astype(float)
-
-        # 표시 컬럼 선택
         display_cols = [
             "종목명", "b가격", "측정일", "측정일종가", "현재가",
             "현재가대비수익률", "최고수익률", "최저수익률"
         ]
-        df_display = df_month[display_cols].copy()
+
+        # 안전 변환 적용
+        df_display = safe_convert(df_month[display_cols].copy())
 
         # AgGrid 설정
         gb = GridOptionsBuilder.from_dataframe(df_display)
