@@ -21,7 +21,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ------------------------------------------------
 st.set_page_config(page_title="한국 눌림 종목 순위", layout="wide")
 
-st.markdown("<h4 style='text-align:center;'>📊 b_return 테이블 (수익률 순)</h4>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center;'>📊한국 눌림 종목 수익률 순위</h4>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:13px; color:gray;'>Supabase에서 불러온 데이터를 수익률 순으로 정렬하여 표시합니다.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
