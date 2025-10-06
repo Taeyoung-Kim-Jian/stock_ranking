@@ -72,9 +72,13 @@ grid_response = AgGrid(
 # ------------------------------------------------
 # 행 클릭 시 페이지 이동
 # ------------------------------------------------
+# ------------------------------------------------
+# 행 클릭 시 페이지 이동
+# ------------------------------------------------
 selected = grid_response["selected_rows"]
 
-if selected:
+# ✅ 수정 포인트
+if len(selected) > 0:
     selected_row = selected[0]
     stock_name = selected_row["종목명"]
     st.session_state["selected_stock"] = stock_name  # 세션에 저장
