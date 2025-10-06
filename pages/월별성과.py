@@ -106,8 +106,10 @@ for i, month in enumerate(months):
                     st.stop()
 
                 # 세션 저장 후 바로 페이지 이동
-                st.session_state["selected_stock_name"] = stock_name
-                st.session_state["selected_stock_code"] = stock_code
+                st.session_state["selected_stock"] = stock_name
+                st.session_state["selected_code"] = stock_code
+                st.switch_page("pages/stock_detail.py")
+
                 st.switch_page("pages/stock_detail.py")
 
 st.markdown("---")
