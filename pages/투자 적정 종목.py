@@ -27,7 +27,7 @@ st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>현재가
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로딩
+# 데이터 로딩 및 정제
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_via_join():
@@ -40,62 +40,84 @@ def load_via_join():
         if df_b.empty or df_t.empty:
             return pd.DataFrame()
 
+        # 병합
         df = pd.merge(df_b, df_t, on="종목코드", how="inner")
+
+        # 숫자형 변환 및 정제
+        df["b가격"] = pd.to_numeric(df["b가격"], errors="coerce").fillna(0)
+        df["현재가격"] = pd.to_numeric(df["현재가격"], errors="coerce").fillna(0)
+        df = df.replace([float("inf"), -float("inf")], 0).fillna(0)
+
+        # 변동률 계산
         df["변동률"] = ((df["현재가격"] - df["b가격"]) / df["b가격"] * 100).round(2)
         df = df[(df["현재가격"] >= df["b가격"] * 0.95) & (df["현재가격"] <= df["b가격"] * 1.05)]
         df = df.sort_values("변동률", ascending=True)
+
+        # 타입 통일
+        df = df.astype({
+            "종목명": str,
+            "종목코드": str,
+            "b가격": float,
+            "현재가격": float,
+            "변동률": float
+        })
         return df[["종목명", "종목코드", "b가격", "현재가격", "변동률"]]
+
     except Exception as e:
         st.error(f"❌ 데이터 병합 중 오류: {e}")
         return pd.DataFrame()
 
 df = load_via_join()
+
 if df.empty:
     st.warning("⚠️ 현재 b가격 ±5% 이내의 종목이 없습니다.")
     st.stop()
 
 # ------------------------------------------------
-# AgGrid 스타일 및 설정
+# AgGrid 시각 설정 (색상, 폰트, 인터랙션)
 # ------------------------------------------------
-# 1️⃣ 수익률 색상 강조 (JS 코드)
 cell_style_jscode = JsCode("""
 function(params) {
     if (params.value > 0) {
-        return {color: 'red', fontWeight: 'bold'};
+        return {'color': 'red', 'fontWeight': 'bold'};
     } else if (params.value < 0) {
-        return {color: 'blue', fontWeight: 'bold'};
+        return {'color': 'blue', 'fontWeight': 'bold'};
     } else {
-        return {color: 'black'};
+        return {'color': 'black', 'fontWeight': 'bold'};
     }
 }
 """)
 
-# 2️⃣ Grid 옵션 구성
 gb = GridOptionsBuilder.from_dataframe(df)
-gb.configure_default_column(resizable=True, sortable=True, filter=True, cellStyle={'fontSize': '13px', 'fontFamily': 'Pretendard, sans-serif'})
-gb.configure_column("변동률", cellStyle=cell_style_jscode)  # 색상 강조
+gb.configure_default_column(
+    resizable=True,
+    sortable=True,
+    filter=True,
+    cellStyle={'fontSize': '14px', 'fontFamily': 'Pretendard, sans-serif'}
+)
+gb.configure_column("변동률", cellStyle=cell_style_jscode)
 gb.configure_selection(selection_mode="single", use_checkbox=False)
-gb.configure_grid_options(domLayout='normal', rowHeight=35)
+gb.configure_grid_options(domLayout='normal', rowHeight=38)
 
 grid_options = gb.build()
 
 # ------------------------------------------------
-# AgGrid 렌더링
+# 테이블 렌더링
 # ------------------------------------------------
 grid_response = AgGrid(
     df,
     gridOptions=grid_options,
     enable_enterprise_modules=False,
     update_mode=GridUpdateMode.SELECTION_CHANGED,
-    theme="streamlit",  # light/dark 자동 적용
+    theme="streamlit",
     fit_columns_on_grid_load=True,
-    height=600,
+    height=620,
 )
 
 selected = grid_response.get("selected_rows")
 
 # ------------------------------------------------
-# 행 클릭 시 차트 페이지로 이동
+# 클릭 시 차트 페이지로 이동
 # ------------------------------------------------
 if selected is not None and len(selected) > 0:
     selected_row = selected.iloc[0]
