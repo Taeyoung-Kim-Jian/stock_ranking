@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import os
 from supabase import create_client
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # ------------------------------------------------
 # Supabase 연결
@@ -22,47 +23,11 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="투자 적정 종목", layout="wide")
 
 st.markdown("<h4 style='text-align:center;'>💰 투자 적정 구간 종목 리스트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>현재가격이 b가격 ±5% 이내인 종목입니다.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>현재가격이 b가격 ±5% 이내인 종목입니다. 행을 클릭하면 차트로 이동합니다.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
 # 데이터 로딩
-# ------------------------------------------------
-@st.cache_data(ttl=300)
-def load_fair_price_stocks():
-    """
-    Supabase에서 b가격 ±5% 범위의 종목을 SQL 쿼리로 직접 가져옴
-    """
-    query = """
-        SELECT
-            t.종목명,
-            b.종목코드,
-            b.b가격,
-            t.현재가격,
-            ROUND(((t.현재가격 - b.b가격) / b.b가격 * 100)::numeric, 2) AS 변동률
-        FROM
-            bt_points AS b
-        JOIN
-            total_return AS t
-        ON
-            b.종목코드 = t.종목코드
-        WHERE
-            t.현재가격 BETWEEN b.b가격 * 0.95 AND b.b가격 * 1.05
-        ORDER BY
-            변동률 ASC;
-    """
-    try:
-        result = supabase.rpc("exec_sql", {"sql": query}).execute()
-        # ↑ 주의: Supabase 기본 client는 직접 SQL 실행을 지원하지 않음
-        # Supabase에서 view 생성 또는 python 내 join으로 대체 가능
-        return pd.DataFrame(result.data)
-    except Exception as e:
-        st.error(f"❌ SQL 실행 중 오류 발생: {e}")
-        return pd.DataFrame()
-
-# ------------------------------------------------
-# Supabase가 SQL 실행을 직접 지원하지 않으므로
-# Python에서 JOIN으로 대체 (권장)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_via_join():
@@ -84,16 +49,42 @@ def load_via_join():
         st.error(f"❌ 데이터 병합 중 오류: {e}")
         return pd.DataFrame()
 
-# ------------------------------------------------
-# 데이터 표시
-# ------------------------------------------------
 df = load_via_join()
-
 if df.empty:
     st.warning("⚠️ 현재 b가격 ±5% 이내의 종목이 없습니다.")
     st.stop()
 
-st.dataframe(df, use_container_width=True, hide_index=True)
+# ------------------------------------------------
+# AgGrid 설정
+# ------------------------------------------------
+gb = GridOptionsBuilder.from_dataframe(df)
+gb.configure_default_column(resizable=True, sortable=True, filter=True)
+gb.configure_selection(selection_mode="single", use_checkbox=False)
+gb.configure_grid_options(domLayout='normal')
+grid_options = gb.build()
+
+grid_response = AgGrid(
+    df,
+    gridOptions=grid_options,
+    enable_enterprise_modules=False,
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+    theme="streamlit",
+    fit_columns_on_grid_load=True,
+    height=600,
+)
+
+selected = grid_response.get("selected_rows")
+
+# ------------------------------------------------
+# 행 클릭 시 차트 페이지로 이동
+# ------------------------------------------------
+if selected is not None and len(selected) > 0:
+    selected_row = selected.iloc[0]
+    stock_name = selected_row["종목명"]
+    st.session_state["selected_stock"] = stock_name
+
+    st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
+    st.switch_page("pages/stock_detail.py")
 
 st.markdown("---")
 st.caption("💡 b가격 ±5% 구간에 위치한 종목은 매수/매도 균형 구간으로 해석할 수 있습니다.")
