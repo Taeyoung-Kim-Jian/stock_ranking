@@ -111,7 +111,8 @@ for i, month in enumerate(months):
         # ------------------------------------------------
         # 클릭 시 차트 페이지로 이동
         # ------------------------------------------------
-        if selected:
+        if selected is not None and len(selected) > 0:
+            
             selected_row = selected[0]
             stock_name = selected_row["종목명"]
             stock_code = selected_row["종목코드"]
