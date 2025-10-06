@@ -96,28 +96,36 @@ for i, month in enumerate(months):
         # ------------------------------------------------
         # 클릭 시 차트 페이지로 이동
         # ------------------------------------------------
-        if selected is not None and len(selected) > 0:
-            # Streamlit Cloud 호환 (DataFrame or list 모두 지원)
-            if isinstance(selected, pd.DataFrame):
-                selected_row = selected.iloc[0].to_dict()
-            elif isinstance(selected, list):
-                selected_row = selected[0]
-            else:
-                st.warning("⚠️ 선택된 행 데이터를 인식할 수 없습니다.")
-                st.stop()
+        iselected = grid_response.get("selected_rows")
 
-            stock_name = selected_row.get("종목명")
-            stock_code = selected_row.get("종목코드")
+if selected is not None and len(selected) > 0:
+    # Streamlit Cloud 호환 (DataFrame/list 모두 지원)
+    if isinstance(selected, pd.DataFrame):
+        selected_row = selected.iloc[0].to_dict()
+    elif isinstance(selected, list):
+        selected_row = selected[0]
+    else:
+        st.warning("⚠️ 선택된 행 데이터를 인식할 수 없습니다.")
+        st.stop()
 
-            if not stock_code:
-                st.warning("⚠️ 종목코드가 없습니다. 테이블 구조를 확인하세요.")
-                st.stop()
+    stock_name = selected_row.get("종목명")
+    stock_code = selected_row.get("종목코드")
 
-            st.session_state["selected_stock_name"] = stock_name
-            st.session_state["selected_stock_code"] = stock_code
+    if not stock_code:
+        st.warning("⚠️ 종목코드가 없습니다. 테이블 구조를 확인하세요.")
+        st.stop()
 
-            st.success(f"✅ {stock_name} ({stock_code}) 차트 페이지로 이동 중...")
-            st.switch_page("pages/stock_detail.py")
+    # ✅ 세션 값 저장
+    st.session_state["selected_stock_name"] = stock_name
+    st.session_state["selected_stock_code"] = stock_code
 
-st.markdown("---")
-st.caption("💡 행을 클릭하면 해당 종목의 차트 페이지로 이동합니다.")
+    st.success(f"✅ {stock_name} ({stock_code}) 차트 페이지로 이동 중...")
+
+    # ✅ rerun을 한 번 강제해서 세션이 완전히 반영되도록 함
+    st.session_state["go_to_detail"] = True
+    st.experimental_rerun()
+
+# ✅ rerun 후 이 부분 실행 (세션 데이터가 안정적으로 존재)
+if st.session_state.get("go_to_detail"):
+    st.session_state.pop("go_to_detail")  # 플래그 제거
+    st.switch_page("pages/stock_detail.py")
