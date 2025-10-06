@@ -27,7 +27,7 @@ st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>행을 �
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로딩
+# 데이터 로드
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_monthly_tracking():
@@ -42,7 +42,6 @@ def load_monthly_tracking():
         if df.empty:
             return df
 
-        # 월 포맷 정리
         df["월포맷"] = pd.to_datetime(df["월구분"], errors="coerce").dt.strftime("%y.%m")
         df = df[df["월포맷"].notna()]
         df = df.fillna(0)
@@ -92,9 +91,7 @@ for i, month in enumerate(months):
 
         selected = grid_response.get("selected_rows")
 
-        # ------------------------------------------------
-        # 클릭 시 세션 저장 → rerun → 이동
-        # ------------------------------------------------
+        # ✅ 행 클릭 처리
         if selected is not None and len(selected) > 0:
             if isinstance(selected, pd.DataFrame):
                 selected_row = selected.iloc[0].to_dict()
@@ -111,18 +108,14 @@ for i, month in enumerate(months):
                 st.warning("⚠️ 종목코드가 없습니다. 테이블 구조를 확인하세요.")
                 st.stop()
 
-            # ✅ 세션에 저장
             st.session_state["selected_stock_name"] = stock_name
             st.session_state["selected_stock_code"] = stock_code
-
-            # ✅ rerun 플래그 설정
             st.session_state["go_to_detail"] = True
             st.rerun()
 
-
-# ✅ rerun 후 페이지 전환
+# ✅ rerun 이후 한 번만 이동
 if st.session_state.get("go_to_detail"):
-    st.session_state.pop("go_to_detail")
+    st.session_state.pop("go_to_detail")  # 루프 방지
     st.switch_page("pages/stock_detail.py")
 
 st.markdown("---")
