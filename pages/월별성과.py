@@ -8,13 +8,14 @@ st.set_page_config(page_title="📆 월별 성과", layout="wide")
 # =====================================================
 # 1️⃣ Supabase 연결
 # =====================================================
-@st.cache_resource
-def init_connection():
-    url = st.secrets["supabase"]["url"]
-    key = st.secrets["supabase"]["key"]
-    return create_client(url, key)
+SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
 
-supabase = init_connection()
+if not SUPABASE_URL or not SUPABASE_KEY:
+    st.error("❌ Supabase 환경변수(SUPABASE_URL, SUPABASE_KEY)가 설정되지 않았습니다.")
+    st.stop()
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # =====================================================
 # 2️⃣ 데이터 불러오기
