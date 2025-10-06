@@ -1,142 +1,89 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
+import os
 from supabase import create_client
+import altair as alt
 
 # ------------------------------------------------
 # Supabase 연결
 # ------------------------------------------------
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    st.error("❌ Supabase 환경변수(SUPABASE_URL, SUPABASE_KEY)가 설정되지 않았습니다.")
+    st.stop()
+
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ------------------------------------------------
 # 페이지 설정
 # ------------------------------------------------
-st.set_page_config(page_title="📈 종목 상세", layout="wide")
+st.set_page_config(page_title="종목 상세 차트", layout="wide")
 
 # ------------------------------------------------
-# 세션 상태에서 선택 종목 불러오기
+# 선택된 종목 확인
 # ------------------------------------------------
-if "selected_code" not in st.session_state:
-    st.warning("⚠️ 선택된 종목이 없습니다. 메인 페이지에서 종목을 선택하세요.")
+if "selected_stock" not in st.session_state:
+    st.warning("⚠️ 종목이 선택되지 않았습니다. '전체 종목' 페이지에서 선택하세요.")
     st.stop()
 
-code = str(st.session_state.selected_code).zfill(6)
-name = st.session_state.selected_name
+stock_name = st.session_state["selected_stock"]
 
-st.title(f"📈 {name} ({code}) 상세 차트")
+st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} 주가 차트</h4>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase에서 불러온 가격 데이터 기반</p>", unsafe_allow_html=True)
+st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로딩 함수
+# 데이터 로드
 # ------------------------------------------------
 @st.cache_data(ttl=300)
-def load_prices(code):
-    """Supabase에서 최대 5000개까지 prices 데이터 불러오기"""
-    all_data = []
-    chunk_size = 1000
-    for i in range(0, 5000, chunk_size):
+def load_price_data(name):
+    """
+    Supabase의 prices 테이블에서 특정 종목의 일자별 가격 데이터 조회
+    (날짜, 종가, 거래량 등 컬럼이 있다고 가정)
+    """
+    try:
         res = (
             supabase.table("prices")
             .select("날짜, 종가")
-            .eq("종목코드", code)
+            .eq("종목명", name)
             .order("날짜", desc=False)
-            .range(i, i + chunk_size - 1)
             .execute()
         )
-        if not res.data:
-            break
-        all_data.extend(res.data)
+        df = pd.DataFrame(res.data)
+        if not df.empty:
+            df["날짜"] = pd.to_datetime(df["날짜"])
+            df = df.sort_values("날짜")
+        return df
+    except Exception as e:
+        st.error(f"❌ 가격 데이터 로딩 오류: {e}")
+        return pd.DataFrame()
 
-    df = pd.DataFrame(all_data)
-    if not df.empty:
-        df["날짜"] = df["날짜"].astype(str)
-        # 날짜 자동 인식
-        if df["날짜"].str.match(r"^\d{8}$").any():
-            df["날짜"] = pd.to_datetime(df["날짜"], format="%Y%m%d", errors="coerce")
-        else:
-            df["날짜"] = pd.to_datetime(df["날짜"], errors="coerce")
-        df = df.dropna(subset=["날짜"])
-        df["종가"] = df["종가"].astype(float)
-    return df
-
-
-@st.cache_data(ttl=300)
-def load_b_points(code):
-    """low_after_b 테이블에서 B 포인트 불러오기"""
-    res = (
-        supabase.table("low_after_b")
-        .select("구분, b가격, 발생일")
-        .eq("종목코드", code)
-        .order("발생일", desc=True)
-        .range(0, 999)
-        .execute()
-    )
-    df = pd.DataFrame(res.data)
-    if not df.empty:
-        df["발생일"] = pd.to_datetime(df["발생일"], errors="coerce")
-        df["b가격"] = df["b가격"].astype(float)
-    return df
+df_price = load_price_data(stock_name)
 
 # ------------------------------------------------
-# 데이터 불러오기
+# 차트 표시
 # ------------------------------------------------
-df_price = load_prices(code)
-df_bpoints = load_b_points(code)
-
 if df_price.empty:
-    st.warning("⚠️ 가격 데이터가 없습니다. Supabase 'prices' 테이블을 확인하세요.")
-    st.stop()
-
-# ------------------------------------------------
-# 차트 생성
-# ------------------------------------------------
-fig = go.Figure()
-
-# ✅ 종가 라인
-fig.add_trace(
-    go.Scatter(
-        x=df_price["날짜"],
-        y=df_price["종가"],
-        mode="lines",
-        name="종가",
-        line=dict(color="royalblue", width=2),
+    st.warning("⚠️ 해당 종목의 가격 데이터를 찾을 수 없습니다.")
+else:
+    line_chart = (
+        alt.Chart(df_price)
+        .mark_line(color="#f9a825", interpolate="monotone")
+        .encode(
+            x=alt.X("날짜:T", title="날짜"),
+            y=alt.Y("종가:Q", title="종가 (₩)"),
+            tooltip=["날짜", "종가"]
+        )
+        .properties(width="container", height=400)
     )
-)
 
-# ✅ B 포인트 수평선 (실선)
-if not df_bpoints.empty:
-    for _, row in df_bpoints.iterrows():
-        if pd.notna(row["b가격"]):
-            fig.add_hline(
-                y=row["b가격"],
-                line=dict(color="red", width=2, dash="solid"),  # ✅ 실선
-                annotation_text=f"B({row['구분']})",
-                annotation_position="right",
-                annotation_font=dict(color="red", size=12, family="Arial Black"),
-            )
+    st.altair_chart(line_chart, use_container_width=True)
 
 # ------------------------------------------------
-# 차트 설정
+# 뒤로가기 버튼
 # ------------------------------------------------
-fig.update_layout(
-    height=700,
-    xaxis_title="날짜",
-    yaxis_title="가격 (₩)",
-    template="plotly_white",
-    margin=dict(l=20, r=20, t=40, b=20),
-    showlegend=False,
-)
-
-# ✅ X축 전체 표시
-if not df_price.empty:
-    fig.update_xaxes(range=[df_price["날짜"].min(), df_price["날짜"].max()])
-
-# ------------------------------------------------
-# 출력
-# ------------------------------------------------
-st.plotly_chart(fig, use_container_width=True)
-
-st.markdown("---")
-st.caption("📊 붉은 수평선은 각 B가격을 의미합니다. (구분: B0, B1, B2 …)")
+if st.button("⬅️ 전체 종목으로 돌아가기"):
+    st.switch_page("pages/전체 종목.py")
