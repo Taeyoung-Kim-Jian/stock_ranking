@@ -4,7 +4,10 @@ supabase
 streamlit-aggrid
 plotly
 streamlit-js-eval
-matplotlib    
+matplotlib   
+psycopg2-binary
+
+
 
 
 
