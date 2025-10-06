@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
+import os
 from supabase import create_client
 
 st.set_page_config(page_title="📆 월별 성과", layout="wide")
