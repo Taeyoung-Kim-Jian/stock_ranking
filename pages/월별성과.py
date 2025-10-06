@@ -20,9 +20,9 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ------------------------------------------------
 # 페이지 설정
 # ------------------------------------------------
-st.set_page_config(page_title="전체 종목 목록", layout="wide")
+st.set_page_config(page_title="📊 월별 성과", layout="wide")
 
-st.markdown("<h4 style='text-align:center;'>📋 전체 종목 리스트</h4>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center;'>📋 전체 종목 월별 성과 리스트</h4>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>행을 클릭하면 상세 차트 페이지로 이동합니다.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -38,7 +38,8 @@ def load_total_return():
             .order("수익률", desc=True)
             .execute()
         )
-        return pd.DataFrame(res.data)
+        df = pd.DataFrame(res.data)
+        return df
     except Exception as e:
         st.error(f"❌ 데이터 불러오기 오류: {e}")
         return pd.DataFrame()
@@ -70,21 +71,25 @@ grid_response = AgGrid(
 )
 
 # ------------------------------------------------
-# 행 클릭 시 페이지 이동
+# 행 클릭 시 페이지 이동 (안정 버전)
 # ------------------------------------------------
 selected = grid_response.get("selected_rows")
+
+# selected_rows가 DataFrame으로 반환될 수도 있으므로 변환
+if isinstance(selected, pd.DataFrame):
+    selected = selected.to_dict("records")
 
 if selected and len(selected) > 0:
     selected_row = selected[0]
     stock_name = selected_row.get("종목명")
     stock_code = selected_row.get("종목코드")
 
-    # 코드가 없으면 경고
+    # 종목코드 누락 방지
     if not stock_code:
         st.warning(f"⚠️ {stock_name}의 종목코드를 찾을 수 없습니다.")
         st.stop()
 
-    # 같은 종목을 반복 클릭 시 rerun 방지
+    # 동일 종목 반복 선택 시 rerun 방지
     if (
         st.session_state.get("selected_stock") != stock_name
         or st.session_state.get("selected_code") != stock_code
