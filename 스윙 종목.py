@@ -22,7 +22,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 
 # ------------------------------------------------
-# ✅ 상단 스크롤 네비게이션 (디자인 유지 + 실제 이동)
+# ✅ 상단 스크롤 네비게이션
 # ------------------------------------------------
 st.markdown("""
 <style>
@@ -91,12 +91,12 @@ st.markdown("<p style='text-align:center; font-size:13px; color:gray; margin-top
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로딩
+# 데이터 로딩 (total_return 테이블 사용)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_returns():
     query = (
-        supabase.table("b_return")
+        supabase.table("total_return")
         .select("종목명, 종목코드, 수익률, 발생일, 구분")
         .order("수익률", desc=True)
         .limit(5000)
@@ -106,7 +106,7 @@ def load_returns():
 
 df_all = load_returns()
 if df_all.empty:
-    st.warning("⚠️ Supabase의 b_return 테이블에 데이터가 없습니다.")
+    st.warning("⚠️ Supabase의 total_return 테이블에 데이터가 없습니다.")
     st.stop()
 
 # ------------------------------------------------
@@ -160,8 +160,8 @@ def make_card(title, df):
 
 cards_html = f"""
 <div class='dashboard-grid'>
-    {make_card("🟠 국내 눌림 상위 TOP5", domestic_top5)}
-    {make_card("🟠 국내 눌림 하위 TOP5", domestic_bottom5)}
+    {make_card("🟠 국내 스윙 상위 TOP5", domestic_top5)}
+    {make_card("🟠 국내 스윙 하위 TOP5", domestic_bottom5)}
     {make_card("🟢 해외 성장 상위 TOP5", foreign_top5)}
     {make_card("🟢 해외 성장 하위 TOP5", foreign_bottom5)}
 </div>
