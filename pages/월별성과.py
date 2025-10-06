@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
-import os
+import os, json
 from supabase import create_client
 from st_aggrid import AgGrid, GridOptionsBuilder
+import matplotlib.pyplot as plt
 
 # ------------------------------------------------
 # 페이지 설정
@@ -27,20 +28,27 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ------------------------------------------------
-# 안전 변환 함수 (NaN / Decimal / Timestamp 처리)
+# 안전 변환 함수 (모든 타입을 JSON 직렬화 가능하게)
 # ------------------------------------------------
 def safe_convert(df):
-    df = df.fillna("")
+    df = df.replace({pd.NA: None}).fillna("")
     for c in df.columns:
-        # 날짜형 → 문자열 변환
+        # 날짜형 → 문자열
         if "날짜" in c or c == "월구분":
             df[c] = df[c].astype(str)
         else:
             # 숫자형 변환 (NaN, Inf 방지)
             df[c] = pd.to_numeric(df[c], errors="coerce")
             df[c] = df[c].replace([float("inf"), float("-inf")], 0).fillna(0).astype(float)
-    # numpy.float64 → Python 기본 float 변환
+    # numpy.float64 → Python float
     df = df.applymap(lambda x: x.item() if hasattr(x, "item") else x)
+    # object형 (리스트, None 등) → 문자열로 변환
+    df = df.applymap(lambda x: x if isinstance(x, (str, int, float)) else str(x))
+    # JSON 직렬화 테스트
+    try:
+        json.dumps(df.to_dict(orient="records"))
+    except Exception as e:
+        st.warning(f"⚠️ JSON 직렬화 중 변환된 데이터 예외 발생: {e}")
     return df
 
 # ------------------------------------------------
@@ -72,6 +80,28 @@ if df.empty:
 st.success(f"✅ 총 {len(df)}건의 데이터 불러옴")
 
 # ------------------------------------------------
+# 월별 평균 수익률 시각화
+# ------------------------------------------------
+try:
+    avg_df = (
+        df.groupby("월포맷")["현재가대비수익률"]
+        .mean()
+        .reset_index()
+        .sort_values("월포맷", ascending=True)
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 3))
+    ax.bar(avg_df["월포맷"], avg_df["현재가대비수익률"], color="skyblue")
+    ax.set_title("📊 월별 평균 수익률", fontsize=13)
+    ax.set_ylabel("평균 수익률 (%)")
+    ax.set_xlabel("월")
+    for i, v in enumerate(avg_df["현재가대비수익률"]):
+        ax.text(i, v + 0.2, f"{v:.1f}%", ha="center", fontsize=9)
+    st.pyplot(fig)
+except Exception as e:
+    st.warning(f"⚠️ 월별 평균 수익률 그래프 생성 중 오류: {e}")
+
+# ------------------------------------------------
 # 월별 탭 표시
 # ------------------------------------------------
 months = sorted(df["월포맷"].unique(), reverse=True)
@@ -99,7 +129,6 @@ for i, month in enumerate(months):
         })
         grid_options = gb.build()
 
-        # AgGrid 렌더링
         AgGrid(
             df_display,
             gridOptions=grid_options,
