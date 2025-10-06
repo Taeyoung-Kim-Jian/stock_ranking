@@ -63,27 +63,6 @@ if df.empty:
 
 st.success(f"✅ 총 {len(df)}건의 데이터 불러옴")
 
-# ------------------------------------------------
-# 월별 평균 수익률 시각화
-# ------------------------------------------------
-try:
-    avg_df = (
-        df.groupby("월포맷")["측정일대비수익률"]
-        .mean()
-        .reset_index()
-        .sort_values("월포맷", ascending=True)
-    )
-
-    fig, ax = plt.subplots(figsize=(8, 3))
-    ax.bar(avg_df["월포맷"], avg_df["측정일대비수익률"], color="skyblue")
-    ax.set_title("📊 월별 평균 수익률", fontsize=13)
-    ax.set_ylabel("평균 수익률 (%)")
-    ax.set_xlabel("월")
-    for i, v in enumerate(avg_df["측정일대비수익률"]):
-        ax.text(i, v + 0.2, f"{v:.1f}%", ha="center", fontsize=9)
-    st.pyplot(fig)
-except Exception as e:
-    st.warning(f"⚠️ 월별 평균 수익률 그래프 생성 중 오류: {e}")
 
 # ------------------------------------------------
 # 월별 탭
