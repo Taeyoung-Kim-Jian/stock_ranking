@@ -117,7 +117,8 @@ for i, month in enumerate(months):
 
             # ✅ rerun 플래그 설정
             st.session_state["go_to_detail"] = True
-            st.experimental_rerun()
+            st.rerun()
+
 
 # ✅ rerun 후 페이지 전환
 if st.session_state.get("go_to_detail"):
