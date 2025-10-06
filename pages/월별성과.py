@@ -6,7 +6,7 @@ from supabase import create_client
 import matplotlib.pyplot as plt
 
 # ------------------------------------------------
-# 페이지 설정
+# 페이지 설정11
 # ------------------------------------------------
 st.set_page_config(page_title="📆 월별 성과", layout="wide")
 
