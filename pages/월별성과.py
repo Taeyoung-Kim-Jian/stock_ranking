@@ -89,28 +89,26 @@ for i, month in enumerate(months):
             height=550,
         )
 
-        # ✅ 행 클릭 시 바로 페이지 이동
         selected = grid_response.get("selected_rows")
 
-        if selected and len(selected) > 0:
-            # DataFrame으로 반환될 경우 list 변환
+        # ✅ 타입별 안전 처리
+        if selected is not None:
             if isinstance(selected, pd.DataFrame):
                 selected = selected.to_dict("records")
 
-            selected_row = selected[0]
-            stock_name = selected_row.get("종목명")
-            stock_code = selected_row.get("종목코드")
+            if isinstance(selected, list) and len(selected) > 0:
+                selected_row = selected[0]
+                stock_name = selected_row.get("종목명")
+                stock_code = selected_row.get("종목코드")
 
-            if not stock_code:
-                st.warning("⚠️ 종목코드가 없습니다. 테이블 구조를 확인하세요.")
-                st.stop()
+                if not stock_code:
+                    st.warning("⚠️ 종목코드가 없습니다. 테이블 구조를 확인하세요.")
+                    st.stop()
 
-            # 세션 저장
-            st.session_state["selected_stock_name"] = stock_name
-            st.session_state["selected_stock_code"] = stock_code
-
-            # ✅ 바로 차트 페이지로 이동
-            st.switch_page("pages/stock_detail.py")
+                # 세션 저장 후 바로 페이지 이동
+                st.session_state["selected_stock_name"] = stock_name
+                st.session_state["selected_stock_code"] = stock_code
+                st.switch_page("pages/stock_detail.py")
 
 st.markdown("---")
 st.caption("💡 행을 클릭하면 해당 종목의 차트 페이지로 이동합니다.")
