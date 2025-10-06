@@ -4,7 +4,19 @@ import pandas as pd
 import os
 from supabase import create_client
 import matplotlib.pyplot as plt
+# ✅ Supabase 연결 테스트
+st.markdown("### 🔍 Supabase 연결 테스트")
 
+try:
+    res = supabase.table("b_zone_monthly_tracking").select("*").limit(3).execute()
+    st.write("Raw result:", res)
+    st.write("Data:", res.data)
+    if not res.data:
+        st.warning("⚠️ Supabase에서 데이터를 가져오지 못했습니다.")
+    else:
+        st.success(f"✅ Supabase에서 {len(res.data)}건을 수신했습니다.")
+except Exception as e:
+    st.error(f"❌ Supabase 요청 중 오류 발생: {e}")
 # ------------------------------------------------
 # 페이지 설정11
 # ------------------------------------------------
