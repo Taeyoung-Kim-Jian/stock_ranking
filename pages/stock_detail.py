@@ -144,29 +144,30 @@ else:
     )
 
     if not df_b.empty:
-        # 수평선 (회색)
-        rules = alt.Chart(df_b).mark_rule(color="gray", strokeDash=[4, 2]).encode(
+        # 수평선 (회색 실선)
+        rules = alt.Chart(df_b).mark_rule(color="gray").encode(  # ✅ strokeDash 제거 → 실선
             y="b가격:Q"
         )
-
-        # b가격 텍스트를 수평선 왼쪽 시작지점에 표시
+        
+        # 수평선 왼쪽 시작점에 b가격 표시
         texts = (
             alt.Chart(df_b)
             .mark_text(
                 align="left",
                 baseline="bottom",
                 dx=3,
-                dy=0,
-                color="gray",
+                dy=-6,
+                color="red",
                 fontSize=11,
                 fontWeight="bold"
             )
             .encode(
-                x=alt.value(5),  # ← 왼쪽 고정 (수평선 시작 위치)
+                x=alt.value(5),  # 수평선의 왼쪽 시작 위치에 고정
                 y="b가격:Q",
                 text=alt.Text("b가격:Q", format=".0f")
             )
         )
+
 
         chart = (base_chart + rules + texts).properties(width="container", height=400)
     else:
