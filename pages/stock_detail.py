@@ -17,6 +17,27 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# ✅ 세션 복원 & access_token 자동 주입
+try:
+    token = st.session_state.get("access_token")
+
+    if not token:
+        sess = supabase.auth.get_session()
+        token = (
+            getattr(sess, "access_token", None)
+            or (isinstance(sess, dict) and (sess.get("access_token") or (sess.get("session") or {}).get("access_token")))
+        )
+        if token:
+            st.session_state["access_token"] = token
+            user_info = supabase.auth.get_user()
+            if user_info and getattr(user_info, "user", None):
+                st.session_state["user"] = user_info.user
+
+    if token:
+        supabase.postgrest.auth(token)
+except Exception:
+    pass
+
 # ------------------------------------------------
 # 페이지 설정
 # ------------------------------------------------
@@ -69,11 +90,10 @@ def load_price_data(code):
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
-
 df_price = load_price_data(stock_code)
 
 # ------------------------------------------------
-# 로그인 UI
+# 로그인 / 회원가입 UI
 # ------------------------------------------------
 if "user" not in st.session_state:
     st.session_state.user = None
@@ -91,6 +111,7 @@ if not st.session_state.user:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.user = res.user
                 st.session_state.access_token = res.session.access_token
+                supabase.postgrest.auth(res.session.access_token)
                 st.success(f"👋 {email}님 로그인 완료!")
                 st.rerun()
             except Exception as e:
@@ -149,19 +170,6 @@ if st.session_state.user:
                 user_id = user.id
                 user_email = user.email or "익명"
 
-                # ✅ Supabase 세션에서 access_token 가져오기
-                session = supabase.auth.get_session()
-                if not session or not session.access_token:
-                    st.error("❌ 인증 세션이 유효하지 않습니다. 다시 로그인 해주세요.")
-                    st.stop()
-
-                # ✅ 인증된 클라이언트로 재생성
-                authed_client = create_client(
-                    SUPABASE_URL,
-                    SUPABASE_KEY,
-                    options={"access_token": session.access_token}
-                )
-
                 data = {
                     "종목코드": stock_code,
                     "종목명": stock_name,
@@ -170,7 +178,7 @@ if st.session_state.user:
                     "user_id": user_id,
                 }
 
-                authed_client.table("comments").insert(data).execute()
+                supabase.table("comments").insert(data).execute()
 
                 st.success("✅ 댓글이 등록되었습니다!")
                 st.rerun()
@@ -204,7 +212,8 @@ try:
                 st.markdown(
                     f"""
                     <div style='background-color:#f7f7f7;padding:10px;border-radius:8px;margin-bottom:6px;'>
-                    <b>{row["작성자"]}</b> <span style='color:gray;font-size:12px;'>({pd.to_datetime(row["작성일"]).strftime('%Y-%m-%d %H:%M')})</span><br>
+                    <b>{row["작성자"]}</b> 
+                    <span style='color:gray;font-size:12px;'>({pd.to_datetime(row["작성일"]).strftime('%Y-%m-%d %H:%M')})</span><br>
                     {row["내용"]}
                     </div>
                     """,
