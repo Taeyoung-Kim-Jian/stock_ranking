@@ -64,7 +64,7 @@ if not stock_code:
     st.stop()
 
 # ------------------------------------------------
-# 가격 데이터 로드 (전체)
+# 가격 데이터 로드
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_price_data(name):
@@ -128,6 +128,11 @@ df_price = load_price_data(stock_name)
 df_b = load_b_prices(stock_code)
 
 # ------------------------------------------------
+# b가격 표시 토글 추가
+# ------------------------------------------------
+show_b_lines = st.toggle("📊 b가격 수평선 및 텍스트 표시", value=True)
+
+# ------------------------------------------------
 # 차트 표시
 # ------------------------------------------------
 if df_price.empty:
@@ -143,37 +148,37 @@ else:
         )
     )
 
-    if not df_b.empty:
-        # 수평선 (회색 실선)
-        rules = alt.Chart(df_b).mark_rule(color="gray").encode(  # ✅ strokeDash 제거 → 실선
+    chart = base_chart
+
+    # ✅ 토글이 ON일 때만 b가격 수평선 + 텍스트 표시
+    if show_b_lines and not df_b.empty:
+        # 회색 수평선 (직선)
+        rules = alt.Chart(df_b).mark_rule(color="gray").encode(
             y="b가격:Q"
         )
-        
-        # 수평선 왼쪽 시작점에 b가격 표시
+
+        # 왼쪽 시작점에 빨간 텍스트 표시
         texts = (
             alt.Chart(df_b)
             .mark_text(
                 align="left",
                 baseline="bottom",
                 dx=3,
-                dy=0,
-                color="gray",
+                dy=-6,
+                color="red",
                 fontSize=11,
                 fontWeight="bold"
             )
             .encode(
-                x=alt.value(5),  # 수평선의 왼쪽 시작 위치에 고정
+                x=alt.value(5),  # 왼쪽 시작 위치 고정
                 y="b가격:Q",
                 text=alt.Text("b가격:Q", format=".0f")
             )
         )
 
+        chart = chart + rules + texts
 
-        chart = (base_chart + rules + texts).properties(width="container", height=400)
-    else:
-        chart = base_chart.properties(width="container", height=400)
-
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart.properties(width="container", height=400), use_container_width=True)
 
 # ------------------------------------------------
 # 뒤로가기 버튼
