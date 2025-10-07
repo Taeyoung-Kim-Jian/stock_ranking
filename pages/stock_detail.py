@@ -11,6 +11,7 @@ from datetime import datetime
 # ------------------------------------------------
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
+REDIRECT_URL = os.environ.get("REDIRECT_URL") or st.secrets.get("REDIRECT_URL", "http://localhost:8501")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     st.error("❌ Supabase 환경변수(SUPABASE_URL, SUPABASE_KEY)가 설정되지 않았습니다.")
@@ -33,7 +34,7 @@ if "selected_stock" not in st.session_state:
 stock_name = st.session_state["selected_stock"]
 
 st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} 주가 차트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 데이터 및 댓글 시스템</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 시스템</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
@@ -99,7 +100,7 @@ def load_price_data(name):
 df_price = load_price_data(stock_name)
 
 # ------------------------------------------------
-# 로그인 / 회원가입 UI
+# 로그인 / 회원가입 / Google 로그인
 # ------------------------------------------------
 if "user" not in st.session_state:
     st.session_state.user = None
@@ -109,6 +110,7 @@ st.sidebar.title("🔐 로그인 / 회원가입")
 if not st.session_state.user:
     email = st.sidebar.text_input("이메일")
     password = st.sidebar.text_input("비밀번호", type="password")
+
     col1, col2 = st.sidebar.columns(2)
     with col1:
         if st.button("로그인"):
@@ -118,16 +120,39 @@ if not st.session_state.user:
                 st.success(f"👋 {email}님 로그인 완료!")
                 st.experimental_rerun()
             except Exception as e:
-                st.error("❌ 로그인 실패")
+                st.error(f"❌ 로그인 실패: {e}")
     with col2:
         if st.button("회원가입"):
             try:
-                supabase.auth.sign_up({"email": email, "password": password})
-                st.success("✅ 회원가입 완료! 로그인 해주세요.")
+                res = supabase.auth.sign_up({"email": email, "password": password})
+                if res.user:
+                    st.success("✅ 회원가입 완료! 로그인 해주세요.")
+                    st.experimental_rerun()
             except Exception as e:
                 st.error(f"❌ 회원가입 실패: {e}")
+
+    # ------------------------------------------------
+    # Google 로그인 버튼
+    # ------------------------------------------------
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("🌐 또는 Google 계정으로 로그인")
+
+    if st.sidebar.button("🔐 Google로 로그인"):
+        try:
+            res = supabase.auth.sign_in_with_oauth(
+                {
+                    "provider": "google",
+                    "options": {"redirect_to": REDIRECT_URL},
+                }
+            )
+            st.sidebar.markdown(f"[👉 Google 로그인 진행하기]({res.url})", unsafe_allow_html=True)
+        except Exception as e:
+            st.sidebar.error(f"❌ Google 로그인 오류: {e}")
+
 else:
-    st.sidebar.success(f"👤 {st.session_state.user.email}")
+    # 로그인된 사용자 표시
+    user_email = st.session_state.user.email
+    st.sidebar.success(f"👤 {user_email} 님 로그인 중")
     if st.sidebar.button("로그아웃"):
         st.session_state.user = None
         supabase.auth.sign_out()
@@ -167,7 +192,7 @@ if st.session_state.user:
                 "종목코드": stock_code,
                 "종목명": stock_name,
                 "내용": comment_text,
-                "user_id": st.session_state.user.id
+                "user_id": st.session_state.user.id,
             }).execute()
             st.success("✅ 댓글이 등록되었습니다!")
             st.experimental_rerun()
@@ -202,7 +227,7 @@ try:
                     {row["내용"]}
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
                 if is_owner:
