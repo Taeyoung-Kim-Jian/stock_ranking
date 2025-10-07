@@ -50,6 +50,7 @@ def load_price_data(name):
             .select("날짜, 종가")
             .eq("종목명", name)
             .order("날짜", desc=False)
+            .limit(5000)  # ✅ 최대 5000일 데이터 불러오기
             .execute()
         )
         df = pd.DataFrame(res.data)
