@@ -36,11 +36,39 @@ st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase�
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로드 (전체 데이터)
+# 종목코드 조회
+# ------------------------------------------------
+@st.cache_data(ttl=300)
+def get_stock_code(name):
+    """stocks 테이블에서 종목코드를 조회"""
+    try:
+        res = (
+            supabase.table("stocks")
+            .select("종목코드")
+            .eq("종목명", name)
+            .limit(1)
+            .execute()
+        )
+        data = res.data
+        if data and len(data) > 0:
+            return data[0]["종목코드"]
+        else:
+            return None
+    except Exception as e:
+        st.error(f"❌ 종목코드 조회 오류: {e}")
+        return None
+
+stock_code = get_stock_code(stock_name)
+if not stock_code:
+    st.error("❌ 해당 종목의 종목코드를 찾을 수 없습니다.")
+    st.stop()
+
+# ------------------------------------------------
+# 가격 데이터 로드 (전체)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_price_data(name):
-    """Supabase의 prices 테이블에서 특정 종목의 전체 일자별 가격 데이터 조회"""
+    """prices 테이블에서 특정 종목의 전체 일자별 가격 데이터 조회"""
     try:
         all_data = []
         start = 0
@@ -73,16 +101,16 @@ def load_price_data(name):
         return pd.DataFrame()
 
 # ------------------------------------------------
-# b가격 데이터 로드 (bt_points 테이블 사용)
+# b가격 데이터 로드 (bt_points 테이블, 종목코드 기준)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
-def load_b_prices(name):
-    """Supabase의 bt_points 테이블에서 해당 종목의 모든 b가격 조회"""
+def load_b_prices(code):
+    """bt_points 테이블에서 해당 종목코드의 모든 b가격 조회"""
     try:
         res = (
             supabase.table("bt_points")
             .select("b가격")
-            .eq("종목명", name)
+            .eq("종목코드", code)  # ✅ 종목코드 기준으로 변경
             .execute()
         )
         df = pd.DataFrame(res.data)
@@ -97,7 +125,7 @@ def load_b_prices(name):
 # 데이터 로드 실행
 # ------------------------------------------------
 df_price = load_price_data(stock_name)
-df_b = load_b_prices(stock_name)
+df_b = load_b_prices(stock_code)
 
 # ------------------------------------------------
 # 차트 표시
