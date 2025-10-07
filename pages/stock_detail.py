@@ -145,7 +145,7 @@ else:
 
     # b가격 수평선 추가
     if not df_b.empty:
-        rules = alt.Chart(df_b).mark_rule(color="orange", strokeDash=[4, 2]).encode(
+        rules = alt.Chart(df_b).mark_rule(color="gray", strokeDash=[4, 2]).encode(
             y="b가격:Q"
         )
 
@@ -156,7 +156,7 @@ else:
                 align="left",
                 baseline="middle",
                 dx=5,  # 텍스트를 약간 오른쪽으로 이동
-                color="gray",
+                color="red",
                 fontSize=11
             )
             .encode(
