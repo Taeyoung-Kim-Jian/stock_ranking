@@ -156,8 +156,8 @@ else:
                 align="left",
                 baseline="bottom",
                 dx=3,
-                dy=-6,
-                color="orange",
+                dy=0,
+                color="gray",
                 fontSize=11,
                 fontWeight="bold"
             )
