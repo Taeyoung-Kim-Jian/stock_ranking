@@ -43,12 +43,13 @@ except Exception:
 # ------------------------------------------------
 st.set_page_config(page_title="종목 상세 차트", layout="wide")
 
+
 # ------------------------------------------------
 # 선택된 종목 확인
 # ------------------------------------------------
 if "selected_stock_code" not in st.session_state or "selected_stock_name" not in st.session_state:
-    st.warning("⚠️ 종목이 선택되지 않았습니다. '월별 성과' 페이지에서 선택하세요.")
-    st.stop()
+    st.warning("⚠️ 종목이 선택되지 않았습니다. 메인 페이지로 이동합니다...")
+    st.switch_page("스윙 종목.py")
 
 stock_name = st.session_state["selected_stock_name"]
 stock_code = st.session_state["selected_stock_code"]
