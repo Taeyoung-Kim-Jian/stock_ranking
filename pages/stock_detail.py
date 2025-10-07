@@ -40,35 +40,26 @@ st.markdown("---")
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_price_data(name):
-    """
-    Supabase의 prices 테이블에서 특정 종목의 전체 일자별 가격 데이터 조회
-    (1000개 단위로 반복 호출하여 전체 데이터를 불러옴)
-    """
+    """Supabase의 prices 테이블에서 특정 종목의 전체 일자별 가격 데이터 조회"""
     try:
         all_data = []
         start = 0
         step = 1000
-
         while True:
             res = (
                 supabase.table("prices")
                 .select("날짜, 종가")
                 .eq("종목명", name)
                 .order("날짜", desc=False)
-                .range(start, start + step - 1)  # ✅ 페이지네이션 방식
+                .range(start, start + step - 1)
                 .execute()
             )
-
             data_chunk = res.data
             if not data_chunk:
                 break
-
             all_data.extend(data_chunk)
-
-            # 데이터가 step보다 적으면 마지막 페이지임
             if len(data_chunk) < step:
                 break
-
             start += step
 
         df = pd.DataFrame(all_data)
@@ -81,7 +72,32 @@ def load_price_data(name):
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
+# ------------------------------------------------
+# b가격 데이터 로드
+# ------------------------------------------------
+@st.cache_data(ttl=300)
+def load_b_prices(name):
+    """Supabase의 b_points 테이블에서 해당 종목의 모든 b가격 조회"""
+    try:
+        res = (
+            supabase.table("b_points")
+            .select("b가격")
+            .eq("종목명", name)
+            .execute()
+        )
+        df = pd.DataFrame(res.data)
+        if not df.empty:
+            df["b가격"] = df["b가격"].astype(float)
+        return df
+    except Exception as e:
+        st.error(f"❌ b가격 데이터 로딩 오류: {e}")
+        return pd.DataFrame()
+
+# ------------------------------------------------
+# 데이터 로드 실행
+# ------------------------------------------------
 df_price = load_price_data(stock_name)
+df_b = load_b_prices(stock_name)
 
 # ------------------------------------------------
 # 차트 표시
@@ -89,7 +105,7 @@ df_price = load_price_data(stock_name)
 if df_price.empty:
     st.warning("⚠️ 해당 종목의 가격 데이터를 찾을 수 없습니다.")
 else:
-    line_chart = (
+    base_chart = (
         alt.Chart(df_price)
         .mark_line(color="#f9a825", interpolate="monotone")
         .encode(
@@ -97,10 +113,35 @@ else:
             y=alt.Y("종가:Q", title="종가 (₩)"),
             tooltip=["날짜", "종가"]
         )
-        .properties(width="container", height=400)
     )
 
-    st.altair_chart(line_chart, use_container_width=True)
+    # b가격 수평선 추가
+    if not df_b.empty:
+        rules = alt.Chart(df_b).mark_rule(color="orange", strokeDash=[4, 2]).encode(
+            y="b가격:Q"
+        )
+
+        # 각 수평선 왼쪽에 가격 텍스트 표시
+        texts = (
+            alt.Chart(df_b)
+            .mark_text(
+                align="left",
+                baseline="middle",
+                dx=5,  # 텍스트를 약간 오른쪽으로 이동
+                color="orange",
+                fontSize=11
+            )
+            .encode(
+                y="b가격:Q",
+                text=alt.Text("b가격:Q", format=".0f")
+            )
+        )
+
+        chart = (base_chart + rules + texts).properties(width="container", height=400)
+    else:
+        chart = base_chart.properties(width="container", height=400)
+
+    st.altair_chart(chart, use_container_width=True)
 
 # ------------------------------------------------
 # 뒤로가기 버튼
