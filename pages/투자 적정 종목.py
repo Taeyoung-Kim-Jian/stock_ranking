@@ -78,10 +78,15 @@ selected = grid_response.get("selected_rows")
 # ------------------------------------------------
 # 행 클릭 시 차트 페이지로 이동
 # ------------------------------------------------
-if selected is not None and len(selected) > 0:
-    selected_row = selected.iloc[0]
-    stock_name = selected_row["종목명"]
-    st.session_state["selected_stock"] = stock_name
+if selected and len(selected) > 0:
+    # AgGrid는 리스트[dict] 형태로 반환됩니다.
+    selected_row = selected[0]
+    stock_name = selected_row.get("종목명")
+    stock_code = selected_row.get("종목코드")
+
+    # ✅ stock_detail.py와 동일한 키로 저장
+    st.session_state["selected_stock_name"] = stock_name
+    st.session_state["selected_stock_code"] = stock_code
 
     st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
     st.switch_page("pages/stock_detail.py")
