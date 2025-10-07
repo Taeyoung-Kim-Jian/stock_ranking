@@ -17,10 +17,9 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ✅ 세션 복원 & access_token 자동 주입
+# ✅ 세션 복원
 try:
     token = st.session_state.get("access_token")
-
     if not token:
         sess = supabase.auth.get_session()
         token = (
@@ -32,7 +31,6 @@ try:
             user_info = supabase.auth.get_user()
             if user_info and getattr(user_info, "user", None):
                 st.session_state["user"] = user_info.user
-
     if token:
         supabase.postgrest.auth(token)
 except Exception:
@@ -42,7 +40,6 @@ except Exception:
 # 페이지 설정
 # ------------------------------------------------
 st.set_page_config(page_title="종목 상세 차트", layout="wide")
-
 
 # ------------------------------------------------
 # 선택된 종목 확인
@@ -55,7 +52,7 @@ stock_name = st.session_state["selected_stock_name"]
 stock_code = st.session_state["selected_stock_code"]
 
 st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} ({stock_code}) 주가 차트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 시스템</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 시스템 + b가격 표시</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
@@ -91,49 +88,28 @@ def load_price_data(code):
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
+# ------------------------------------------------
+# b가격 데이터 로드
+# ------------------------------------------------
+@st.cache_data(ttl=300)
+def load_b_prices(code):
+    try:
+        res = supabase.table("bt_points").select("b가격").eq("종목코드", code).execute()
+        df = pd.DataFrame(res.data)
+        if not df.empty:
+            df["b가격"] = df["b가격"].astype(float)
+        return df
+    except Exception as e:
+        st.error(f"❌ b가격 데이터 로딩 오류: {e}")
+        return pd.DataFrame()
+
 df_price = load_price_data(stock_code)
+df_b = load_b_prices(stock_code)
 
 # ------------------------------------------------
-# 로그인 / 회원가입 UI
+# b가격 표시 토글
 # ------------------------------------------------
-if "user" not in st.session_state:
-    st.session_state.user = None
-
-st.sidebar.title("🔐 로그인 / 회원가입")
-
-if not st.session_state.user:
-    email = st.sidebar.text_input("이메일")
-    password = st.sidebar.text_input("비밀번호", type="password")
-
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        if st.button("로그인"):
-            try:
-                res = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                st.session_state.user = res.user
-                st.session_state.access_token = res.session.access_token
-                supabase.postgrest.auth(res.session.access_token)
-                st.success(f"👋 {email}님 로그인 완료!")
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ 로그인 실패: {e}")
-    with col2:
-        if st.button("회원가입"):
-            try:
-                res = supabase.auth.sign_up({"email": email, "password": password})
-                if res.user:
-                    st.success("✅ 회원가입 완료! 로그인 해주세요.")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"❌ 회원가입 실패: {e}")
-
-else:
-    user_email = st.session_state.user.email or "Google 사용자"
-    st.sidebar.success(f"👤 {user_email} 님 로그인 중")
-    if st.sidebar.button("로그아웃"):
-        st.session_state.user = None
-        supabase.auth.sign_out()
-        st.rerun()
+show_b = st.toggle("📊 b가격 표시", value=True)
 
 # ------------------------------------------------
 # 차트 표시
@@ -141,17 +117,42 @@ else:
 if df_price.empty:
     st.warning("⚠️ 가격 데이터 없음")
 else:
-    line_chart = (
+    base_chart = (
         alt.Chart(df_price)
         .mark_line(color="#f9a825")
         .encode(
             x=alt.X("날짜:T", title="날짜"),
             y=alt.Y("종가:Q", title="종가 (₩)"),
-            tooltip=["날짜", "종가"],
+            tooltip=["날짜", "종가"]
         )
-        .properties(width="container", height=400)
     )
-    st.altair_chart(line_chart, use_container_width=True)
+
+    if show_b and not df_b.empty:
+        # 회색 수평선
+        rules = alt.Chart(df_b).mark_rule(color="gray").encode(y="b가격:Q")
+
+        # 왼쪽에 b가격 텍스트 (align='right' + dx=-10)
+        texts = (
+            alt.Chart(df_b)
+            .mark_text(
+                align="right",  # 왼쪽 정렬
+                baseline="middle",
+                dx=-10,  # y축에서 왼쪽으로 10px 이동
+                color="orange",
+                fontSize=11,
+                fontWeight="bold"
+            )
+            .encode(
+                y="b가격:Q",
+                text=alt.Text("b가격:Q", format=".0f")
+            )
+        )
+
+        chart = (base_chart + rules + texts).properties(width="container", height=400)
+    else:
+        chart = base_chart.properties(width="container", height=400)
+
+    st.altair_chart(chart, use_container_width=True)
 
 # ------------------------------------------------
 # 💬 댓글 게시판
@@ -180,7 +181,6 @@ if st.session_state.user:
                 }
 
                 supabase.table("comments").insert(data).execute()
-
                 st.success("✅ 댓글이 등록되었습니다!")
                 st.rerun()
 
@@ -242,4 +242,3 @@ try:
 
 except Exception as e:
     st.error(f"❌ 댓글 불러오기 오류: {e}")
-
