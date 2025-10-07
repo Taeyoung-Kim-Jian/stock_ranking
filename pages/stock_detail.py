@@ -101,7 +101,7 @@ def load_price_data(name):
         return pd.DataFrame()
 
 # ------------------------------------------------
-# b가격 데이터 로드 (bt_points 테이블, 종목코드 기준)
+# b가격 데이터 로드 (bt_points 테이블)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_b_prices(code):
@@ -143,26 +143,26 @@ else:
         )
     )
 
-    # b가격 수평선 + 텍스트 추가
     if not df_b.empty:
         # 수평선 (회색)
         rules = alt.Chart(df_b).mark_rule(color="gray", strokeDash=[4, 2]).encode(
             y="b가격:Q"
         )
 
-        # 수평선 위에 빨간색 텍스트 표시 (dy=-6 으로 살짝 위로 이동)
+        # b가격 텍스트를 수평선 왼쪽 시작지점에 표시
         texts = (
             alt.Chart(df_b)
             .mark_text(
                 align="left",
                 baseline="bottom",
-                dx=5,
-                dy=-6,  # 🔼 수평선 위로 살짝 이동
-                color="red",
+                dx=3,
+                dy=-6,
+                color="gray",
                 fontSize=11,
                 fontWeight="bold"
             )
             .encode(
+                x=alt.value(5),  # ← 왼쪽 고정 (수평선 시작 위치)
                 y="b가격:Q",
                 text=alt.Text("b가격:Q", format=".0f")
             )
