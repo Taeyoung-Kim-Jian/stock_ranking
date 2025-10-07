@@ -110,7 +110,7 @@ def load_b_prices(code):
         res = (
             supabase.table("bt_points")
             .select("b가격")
-            .eq("종목코드", code)  # ✅ 종목코드 기준으로 변경
+            .eq("종목코드", code)
             .execute()
         )
         df = pd.DataFrame(res.data)
@@ -143,21 +143,24 @@ else:
         )
     )
 
-    # b가격 수평선 추가
+    # b가격 수평선 + 텍스트 추가
     if not df_b.empty:
+        # 수평선 (회색)
         rules = alt.Chart(df_b).mark_rule(color="gray", strokeDash=[4, 2]).encode(
             y="b가격:Q"
         )
 
-        # 각 수평선 왼쪽에 가격 텍스트 표시
+        # 수평선 위에 빨간색 텍스트 표시 (dy=-6 으로 살짝 위로 이동)
         texts = (
             alt.Chart(df_b)
             .mark_text(
                 align="left",
-                baseline="middle",
-                dx=5,  # 텍스트를 약간 오른쪽으로 이동
-                color="orange",
-                fontSize=11
+                baseline="bottom",
+                dx=5,
+                dy=-6,  # 🔼 수평선 위로 살짝 이동
+                color="red",
+                fontSize=11,
+                fontWeight="bold"
             )
             .encode(
                 y="b가격:Q",
