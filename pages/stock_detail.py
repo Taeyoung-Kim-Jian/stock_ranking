@@ -156,7 +156,7 @@ else:
                 align="left",
                 baseline="middle",
                 dx=5,  # 텍스트를 약간 오른쪽으로 이동
-                color="orange",
+                color="gray",
                 fontSize=11
             )
             .encode(
