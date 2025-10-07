@@ -110,5 +110,6 @@ for i, month in enumerate(months):
                 st.session_state["selected_stock_code"] = stock_code
                 st.switch_page("pages/stock_detail.py")
 
+
 st.markdown("---")
 st.caption("💡 행을 클릭하면 해당 종목의 차트 페이지로 이동합니다.")
