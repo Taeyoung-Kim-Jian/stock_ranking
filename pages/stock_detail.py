@@ -53,7 +53,7 @@ stock_name = st.session_state["selected_stock_name"]
 stock_code = st.session_state["selected_stock_code"]
 
 st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} ({stock_code}) 주가 차트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>b가격 모드 / 기간 선택 / 댓글 시스템</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>b가격 표시 모드 / 기간 선택 / 댓글 시스템</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
@@ -165,29 +165,31 @@ else:
             visible_b = df_b_sorted.head(1)
 
         elif mode == "가까운 3개":
-            # 가장 가까운 b가격 위치 기반 ±1개씩 표시
+            # ✅ 인덱스 계산 수정 (정확히 3개 나오게)
             nearest_idx = df_b_sorted["diff"].idxmin()
             start_idx = max(0, nearest_idx - 1)
-            end_idx = min(len(df_b_sorted), nearest_idx + 2)
+            end_idx = min(len(df_b_sorted), nearest_idx + 3)
             visible_b = df_b_sorted.iloc[start_idx:end_idx]
 
         else:  # 전체
             visible_b = df_b_sorted.copy()
 
-        # ✅ 현재 차트 종가 범위 내의 b가격만 표시
+        # ✅ 현재 차트 범위 내만 표시
         y_min, y_max = df_price["종가"].min(), df_price["종가"].max()
         visible_b = visible_b[(visible_b["b가격"] >= y_min) & (visible_b["b가격"] <= y_max)]
 
         if not visible_b.empty:
+            # 수평선 (회색)
             rules = alt.Chart(visible_b).mark_rule(color="gray").encode(y="b가격:Q")
 
+            # 왼쪽에 회색 b가격 텍스트
             texts = (
                 alt.Chart(visible_b)
                 .mark_text(
                     align="left",
                     baseline="middle",
-                    dx=-250,
-                    color="orange",
+                    dx=-250,  # 차트 왼쪽으로 이동
+                    color="gray",  # ✅ b가격 텍스트 색상 변경
                     fontSize=11,
                     fontWeight="bold"
                 )
