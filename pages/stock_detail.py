@@ -209,7 +209,7 @@ if st.button("댓글 작성 ✍️"):
                 "내용": comment_text
             }).execute()
             st.success("✅ 댓글이 등록되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"❌ 댓글 저장 오류: {e}")
 
