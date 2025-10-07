@@ -165,7 +165,7 @@ else:
                 baseline="bottom",
                 dx=3,
                 dy=-6,
-                color="red",
+                color="gray",
                 fontSize=11,
                 fontWeight="bold"
             )
