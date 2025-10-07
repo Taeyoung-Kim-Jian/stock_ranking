@@ -161,7 +161,7 @@ st.subheader("💬 종목 댓글 게시판")
 if st.session_state.user:
     comment_text = st.text_area("댓글을 입력하세요", key="comment_text")
 
-    if st.button("댓글 작성 ✍️"):
+    if st.button("댓글 작성 ✍️", key="submit_comment"):
         if not comment_text.strip():
             st.warning("내용을 입력해주세요.")
         else:
@@ -223,13 +223,17 @@ try:
                 if is_owner:
                     col1, col2 = st.columns([1, 1])
                     with col1:
-                        if st.button(f"✏️ 수정_{row['id']}"):
-                            new_text = st.text_area("수정 내용", row["내용"], key=f"edit_{row['id']}")
-                            if st.button(f"저장_{row['id']}"):
+                        if st.button("✏️ 수정", key=f"edit_btn_{row['id']}"):
+                            new_text = st.text_area(
+                                "수정 내용",
+                                row["내용"],
+                                key=f"edit_text_{row['id']}",
+                            )
+                            if st.button("💾 저장", key=f"save_btn_{row['id']}"):
                                 supabase.table("comments").update({"내용": new_text}).eq("id", row["id"]).execute()
                                 st.rerun()
                     with col2:
-                        if st.button(f"🗑️ 삭제_{row['id']}"):
+                        if st.button("🗑️ 삭제", key=f"delete_btn_{row['id']}"):
                             supabase.table("comments").delete().eq("id", row["id"]).execute()
                             st.rerun()
     else:
@@ -241,5 +245,5 @@ except Exception as e:
 # ------------------------------------------------
 # 뒤로가기 버튼
 # ------------------------------------------------
-if st.button("⬅️ 전체 종목으로 돌아가기"):
+if st.button("⬅️ 전체 종목으로 돌아가기", key="back_button"):
     st.switch_page("pages/월별성과.py")
