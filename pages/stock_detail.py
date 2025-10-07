@@ -89,6 +89,7 @@ def load_price_data(code):
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
+
 @st.cache_data(ttl=300)
 def load_b_prices(code):
     try:
@@ -101,11 +102,12 @@ def load_b_prices(code):
         st.error(f"❌ b가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
+
 df_price = load_price_data(stock_code)
 df_b = load_b_prices(stock_code)
 
 # ------------------------------------------------
-# 기간 선택 (라디오 버튼)
+# 차트 기간 선택 (라디오 버튼)
 # ------------------------------------------------
 st.subheader("⏳ 차트 기간 선택")
 period = st.radio(
@@ -143,27 +145,34 @@ else:
     )
 
     if show_b and not df_b.empty:
-        # 회색 수평선
-        rules = alt.Chart(df_b).mark_rule(color="gray").encode(y="b가격:Q")
+        # 현재 표시된 y축 범위 안의 b가격만 표시
+        y_min, y_max = df_price["종가"].min(), df_price["종가"].max()
+        visible_b = df_b[(df_b["b가격"] >= y_min) & (df_b["b가격"] <= y_max)]
 
-        # 가장 왼쪽 끝에 b가격 텍스트
-        texts = (
-            alt.Chart(df_b)
-            .mark_text(
-                align="left",
-                baseline="middle",
-                dx=-250,  # 차트의 왼쪽 바깥으로 이동
-                color="orange",
-                fontSize=11,
-                fontWeight="bold"
-            )
-            .encode(
-                y="b가격:Q",
-                text=alt.Text("b가격:Q", format=".0f")
-            )
-        )
+        if not visible_b.empty:
+            # 수평선
+            rules = alt.Chart(visible_b).mark_rule(color="gray").encode(y="b가격:Q")
 
-        chart = (base_chart + rules + texts).properties(width="container", height=400)
+            # 텍스트 (차트의 왼쪽 끝)
+            texts = (
+                alt.Chart(visible_b)
+                .mark_text(
+                    align="left",
+                    baseline="middle",
+                    dx=-250,  # 왼쪽 밖으로 이동
+                    color="orange",
+                    fontSize=11,
+                    fontWeight="bold"
+                )
+                .encode(
+                    y="b가격:Q",
+                    text=alt.Text("b가격:Q", format=".0f")
+                )
+            )
+
+            chart = (base_chart + rules + texts).properties(width="container", height=400)
+        else:
+            chart = base_chart.properties(width="container", height=400)
     else:
         chart = base_chart.properties(width="container", height=400)
 
