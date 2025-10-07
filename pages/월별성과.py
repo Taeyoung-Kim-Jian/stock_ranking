@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import os
 from supabase import create_client
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+import altair as alt
 
 # ------------------------------------------------
 # Supabase 연결
@@ -12,7 +12,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    st.error("❌ Supabase 환경변수가 설정되지 않았습니다.")
+    st.error("❌ Supabase 환경변수(SUPABASE_URL, SUPABASE_KEY)가 설정되지 않았습니다.")
     st.stop()
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -20,97 +20,224 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ------------------------------------------------
 # 페이지 설정
 # ------------------------------------------------
-st.set_page_config(page_title="📆 월별 성과", layout="wide")
+st.set_page_config(page_title="종목 상세 차트", layout="wide")
 
-st.markdown("<h4 style='text-align:center;'>📈 월별 성과</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>행을 클릭하면 해당 종목의 차트 페이지로 이동합니다.</p>", unsafe_allow_html=True)
+# ------------------------------------------------
+# 선택된 종목 확인
+# ------------------------------------------------
+if "selected_stock" not in st.session_state:
+    st.warning("⚠️ 종목이 선택되지 않았습니다. '전체 종목' 페이지에서 선택하세요.")
+    st.stop()
+
+stock_name = st.session_state["selected_stock"]
+
+st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} 주가 차트</h4>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 시스템</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로드
+# 종목코드 조회
 # ------------------------------------------------
 @st.cache_data(ttl=300)
-def load_monthly_tracking():
+def get_stock_code(name):
     try:
         res = (
-            supabase.table("b_zone_monthly_tracking")
-            .select("종목명, 종목코드, b가격, 측정일, 측정일종가, 현재가, 측정일대비수익률, 최고수익률, 최저수익률, 월구분")
-            .order("월구분", desc=True)
+            supabase.table("stocks")
+            .select("종목코드")
+            .eq("종목명", name)
+            .limit(1)
             .execute()
         )
-        df = pd.DataFrame(res.data)
-        if df.empty:
-            return df
-
-        df["월포맷"] = pd.to_datetime(df["월구분"], errors="coerce").dt.strftime("%y.%m")
-        df = df[df["월포맷"].notna()]
-        df = df.fillna(0)
-        return df
+        data = res.data
+        if data and len(data) > 0:
+            return data[0]["종목코드"]
+        return None
     except Exception as e:
-        st.error(f"❌ Supabase 데이터 로드 오류: {e}")
-        return pd.DataFrame()
+        st.error(f"❌ 종목코드 조회 오류: {e}")
+        return None
 
-df = load_monthly_tracking()
-if df.empty:
-    st.warning("⚠️ b_zone_monthly_tracking 테이블에 데이터가 없습니다.")
+stock_code = get_stock_code(stock_name)
+if not stock_code:
+    st.error("❌ 해당 종목의 종목코드를 찾을 수 없습니다.")
     st.stop()
 
 # ------------------------------------------------
-# 월별 탭 생성
+# 가격 데이터 로드
 # ------------------------------------------------
-months = sorted(df["월포맷"].unique(), reverse=True)
-tabs = st.tabs(months)
+@st.cache_data(ttl=300)
+def load_price_data(name):
+    try:
+        all_data, start, step = [], 0, 1000
+        while True:
+            res = (
+                supabase.table("prices")
+                .select("날짜, 종가")
+                .eq("종목명", name)
+                .order("날짜", desc=False)
+                .range(start, start + step - 1)
+                .execute()
+            )
+            chunk = res.data
+            if not chunk:
+                break
+            all_data.extend(chunk)
+            if len(chunk) < step:
+                break
+            start += step
+        df = pd.DataFrame(all_data)
+        if not df.empty:
+            df["날짜"] = pd.to_datetime(df["날짜"])
+            df = df.sort_values("날짜")
+        return df
+    except Exception as e:
+        st.error(f"❌ 가격 데이터 로딩 오류: {e}")
+        return pd.DataFrame()
 
-for i, month in enumerate(months):
-    with tabs[i]:
-        st.subheader(f"📅 {month}월 성과")
+df_price = load_price_data(stock_name)
 
-        df_month = df[df["월포맷"] == month].copy()
-        df_month = df_month.sort_values("측정일대비수익률", ascending=False)
+# ------------------------------------------------
+# 로그인 / 회원가입 / 구글 로그인
+# ------------------------------------------------
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-        display_cols = [
-            "종목명", "종목코드", "b가격", "측정일", "측정일종가",
-            "현재가", "측정일대비수익률", "최고수익률", "최저수익률"
-        ]
+st.sidebar.title("🔐 로그인 / 회원가입")
 
-        gb = GridOptionsBuilder.from_dataframe(df_month[display_cols])
-        gb.configure_default_column(resizable=True, sortable=True, filter=True)
-        gb.configure_selection(selection_mode="single", use_checkbox=False)
-        gb.configure_grid_options(domLayout='normal')
-        grid_options = gb.build()
+auth_mode = st.sidebar.radio("모드 선택", ["로그인", "회원가입"])
 
-        grid_response = AgGrid(
-            df_month[display_cols],
-            gridOptions=grid_options,
-            enable_enterprise_modules=False,
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-            theme="streamlit",
-            fit_columns_on_grid_load=True,
-            height=550,
+if not st.session_state.user:
+    email = st.sidebar.text_input("이메일")
+    pw = st.sidebar.text_input("비밀번호", type="password")
+
+    if auth_mode == "로그인":
+        if st.sidebar.button("로그인"):
+            try:
+                res = supabase.auth.sign_in_with_password({"email": email, "password": pw})
+                st.session_state.user = res.user
+                st.success(f"✅ 로그인 완료: {email}")
+                st.experimental_rerun()
+            except Exception as e:
+                st.error("❌ 로그인 실패")
+    else:
+        if st.sidebar.button("회원가입"):
+            try:
+                supabase.auth.sign_up({"email": email, "password": pw})
+                st.success("🎉 회원가입 완료! 로그인 해주세요.")
+            except Exception as e:
+                st.error(f"❌ 회원가입 실패: {e}")
+
+    # ----------------------------
+    # Google OAuth 로그인
+    # ----------------------------
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("🌐 또는 Google 로그인")
+    redirect_url = st.secrets.get("REDIRECT_URL") or "http://localhost:8501"  # 배포 시 수정
+    if st.sidebar.button("🔐 Google 계정으로 로그인"):
+        url = supabase.auth.sign_in_with_oauth({
+            "provider": "google",
+            "options": {"redirect_to": redirect_url}
+        })
+        st.markdown(f"[👉 Google 로그인 진행하기]({url.url})", unsafe_allow_html=True)
+
+else:
+    st.sidebar.success(f"👤 {st.session_state.user.email} 님 로그인 중")
+    if st.sidebar.button("로그아웃"):
+        supabase.auth.sign_out()
+        st.session_state.user = None
+        st.experimental_rerun()
+
+# ------------------------------------------------
+# 차트 표시
+# ------------------------------------------------
+if df_price.empty:
+    st.warning("⚠️ 가격 데이터 없음")
+else:
+    line_chart = (
+        alt.Chart(df_price)
+        .mark_line(color="#f9a825")
+        .encode(
+            x=alt.X("날짜:T", title="날짜"),
+            y=alt.Y("종가:Q", title="종가 (₩)"),
+            tooltip=["날짜", "종가"]
         )
+        .properties(width="container", height=400)
+    )
+    st.altair_chart(line_chart, use_container_width=True)
 
-        selected = grid_response.get("selected_rows")
-
-        # ✅ 타입별 안전 처리
-        if selected is not None:
-            if isinstance(selected, pd.DataFrame):
-                selected = selected.to_dict("records")
-
-            if isinstance(selected, list) and len(selected) > 0:
-                selected_row = selected[0]
-                stock_name = selected_row.get("종목명")
-                stock_code = selected_row.get("종목코드")
-
-                if not stock_code:
-                    st.warning("⚠️ 종목코드가 없습니다. 테이블 구조를 확인하세요.")
-                    st.stop()
-
-                # 세션 저장 후 바로 페이지 이동
-                st.session_state["selected_stock"] = stock_name
-                st.session_state["selected_code"] = stock_code
-                st.switch_page("pages/stock_detail.py")
-
-                st.switch_page("pages/stock_detail.py")
-
+# ------------------------------------------------
+# 💬 댓글 게시판
+# ------------------------------------------------
 st.markdown("---")
-st.caption("💡 행을 클릭하면 해당 종목의 차트 페이지로 이동합니다.")
+st.subheader("💬 종목 댓글 게시판")
+
+if st.session_state.user:
+    comment_text = st.text_area("댓글을 입력하세요", key="comment_text")
+    if st.button("댓글 작성 ✍️"):
+        if not comment_text.strip():
+            st.warning("내용을 입력해주세요.")
+        else:
+            supabase.table("comments").insert({
+                "종목코드": stock_code,
+                "종목명": stock_name,
+                "내용": comment_text,
+                "user_id": st.session_state.user.id
+            }).execute()
+            st.success("✅ 댓글이 등록되었습니다!")
+            st.experimental_rerun()
+else:
+    st.info("🔒 로그인 후 댓글을 작성할 수 있습니다.")
+
+# ------------------------------------------------
+# 댓글 목록 표시 + 수정/삭제
+# ------------------------------------------------
+try:
+    res = (
+        supabase.table("comments")
+        .select("id, 내용, 작성일, user_id")
+        .eq("종목코드", stock_code)
+        .order("작성일", desc=True)
+        .execute()
+    )
+    comments = pd.DataFrame(res.data)
+
+    if not comments.empty:
+        for _, row in comments.iterrows():
+            is_owner = (
+                st.session_state.user
+                and st.session_state.user.id == row["user_id"]
+            )
+
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div style='background-color:#f7f7f7;padding:10px;border-radius:8px;margin-bottom:6px;'>
+                    <span style='color:gray;font-size:12px;'>{pd.to_datetime(row["작성일"]).strftime('%Y-%m-%d %H:%M')}</span><br>
+                    {row["내용"]}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                if is_owner:
+                    col1, col2 = st.columns([1, 1])
+                    with col1:
+                        if st.button(f"✏️ 수정_{row['id']}"):
+                            new_text = st.text_area("수정 내용", row["내용"], key=f"edit_{row['id']}")
+                            if st.button(f"저장_{row['id']}"):
+                                supabase.table("comments").update({"내용": new_text}).eq("id", row["id"]).execute()
+                                st.experimental_rerun()
+                    with col2:
+                        if st.button(f"🗑️ 삭제_{row['id']}"):
+                            supabase.table("comments").delete().eq("id", row["id"]).execute()
+                            st.experimental_rerun()
+    else:
+        st.info("아직 댓글이 없습니다 💬")
+
+except Exception as e:
+    st.error(f"❌ 댓글 불러오기 오류: {e}")
+
+# ------------------------------------------------
+# 뒤로가기 버튼
+# ------------------------------------------------
+if st.button("⬅️ 전체 종목으로 돌아가기"):
+    st.switch_page("pages/전체 종목.py")
