@@ -27,11 +27,15 @@ st.set_page_config(page_title="종목 상세 차트", layout="wide")
 # ------------------------------------------------
 # 선택된 종목 확인
 # ------------------------------------------------
-if "selected_stock" not in st.session_state:
-    st.warning("⚠️ 종목이 선택되지 않았습니다. '전체 종목' 페이지에서 선택하세요.")
+# ------------------------------------------------
+# 선택된 종목 확인
+# ------------------------------------------------
+if "selected_stock_code" not in st.session_state or "selected_stock_name" not in st.session_state:
+    st.warning("⚠️ 종목이 선택되지 않았습니다. '월별 성과' 페이지에서 선택하세요.")
     st.stop()
 
-stock_name = st.session_state["selected_stock"]
+stock_name = st.session_state["selected_stock_name"]
+stock_code = st.session_state["selected_stock_code"]
 
 st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} 주가 차트</h4>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 시스템</p>", unsafe_allow_html=True)
