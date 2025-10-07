@@ -4,6 +4,7 @@ import pandas as pd
 import os
 from supabase import create_client
 import altair as alt
+from datetime import datetime
 
 # ------------------------------------------------
 # Supabase 연결
@@ -32,7 +33,7 @@ if "selected_stock" not in st.session_state:
 stock_name = st.session_state["selected_stock"]
 
 st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} 주가 차트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase에서 불러온 가격 데이터 기반</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 데이터 및 댓글 시스템</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
@@ -40,7 +41,6 @@ st.markdown("---")
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def get_stock_code(name):
-    """stocks 테이블에서 종목코드를 조회"""
     try:
         res = (
             supabase.table("stocks")
@@ -52,11 +52,11 @@ def get_stock_code(name):
         data = res.data
         if data and len(data) > 0:
             return data[0]["종목코드"]
-        else:
-            return None
+        return None
     except Exception as e:
         st.error(f"❌ 종목코드 조회 오류: {e}")
         return None
+
 
 stock_code = get_stock_code(stock_name)
 if not stock_code:
@@ -68,11 +68,8 @@ if not stock_code:
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_price_data(name):
-    """prices 테이블에서 특정 종목의 전체 일자별 가격 데이터 조회"""
     try:
-        all_data = []
-        start = 0
-        step = 1000
+        all_data, start, step = [], 0, 1000
         while True:
             res = (
                 supabase.table("prices")
@@ -82,109 +79,77 @@ def load_price_data(name):
                 .range(start, start + step - 1)
                 .execute()
             )
-            data_chunk = res.data
-            if not data_chunk:
+            chunk = res.data
+            if not chunk:
                 break
-            all_data.extend(data_chunk)
-            if len(data_chunk) < step:
+            all_data.extend(chunk)
+            if len(chunk) < step:
                 break
             start += step
-
         df = pd.DataFrame(all_data)
         if not df.empty:
             df["날짜"] = pd.to_datetime(df["날짜"])
             df = df.sort_values("날짜")
         return df
-
     except Exception as e:
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
-# ------------------------------------------------
-# b가격 데이터 로드 (bt_points 테이블)
-# ------------------------------------------------
-@st.cache_data(ttl=300)
-def load_b_prices(code):
-    """bt_points 테이블에서 해당 종목코드의 모든 b가격 조회"""
-    try:
-        res = (
-            supabase.table("bt_points")
-            .select("b가격")
-            .eq("종목코드", code)
-            .execute()
-        )
-        df = pd.DataFrame(res.data)
-        if not df.empty:
-            df["b가격"] = df["b가격"].astype(float)
-        return df
-    except Exception as e:
-        st.error(f"❌ b가격 데이터 로딩 오류: {e}")
-        return pd.DataFrame()
 
-# ------------------------------------------------
-# 데이터 로드 실행
-# ------------------------------------------------
 df_price = load_price_data(stock_name)
-df_b = load_b_prices(stock_code)
 
 # ------------------------------------------------
-# b가격 표시 토글 추가
+# 로그인 / 회원가입 UI
 # ------------------------------------------------
-show_b_lines = st.toggle("📊 b가격 표시", value=True)
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+st.sidebar.title("🔐 로그인 / 회원가입")
+
+if not st.session_state.user:
+    email = st.sidebar.text_input("이메일")
+    password = st.sidebar.text_input("비밀번호", type="password")
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("로그인"):
+            try:
+                res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+                st.session_state.user = res.user
+                st.success(f"👋 {email}님 로그인 완료!")
+                st.experimental_rerun()
+            except Exception as e:
+                st.error("❌ 로그인 실패")
+    with col2:
+        if st.button("회원가입"):
+            try:
+                supabase.auth.sign_up({"email": email, "password": password})
+                st.success("✅ 회원가입 완료! 로그인 해주세요.")
+            except Exception as e:
+                st.error(f"❌ 회원가입 실패: {e}")
+else:
+    st.sidebar.success(f"👤 {st.session_state.user.email}")
+    if st.sidebar.button("로그아웃"):
+        st.session_state.user = None
+        supabase.auth.sign_out()
+        st.experimental_rerun()
 
 # ------------------------------------------------
 # 차트 표시
 # ------------------------------------------------
 if df_price.empty:
-    st.warning("⚠️ 해당 종목의 가격 데이터를 찾을 수 없습니다.")
+    st.warning("⚠️ 가격 데이터 없음")
 else:
-    base_chart = (
+    line_chart = (
         alt.Chart(df_price)
-        .mark_line(color="#f9a825", interpolate="monotone")
+        .mark_line(color="#f9a825")
         .encode(
             x=alt.X("날짜:T", title="날짜"),
             y=alt.Y("종가:Q", title="종가 (₩)"),
-            tooltip=["날짜", "종가"]
+            tooltip=["날짜", "종가"],
         )
+        .properties(width="container", height=400)
     )
-
-    chart = base_chart
-
-    # ✅ 토글이 ON일 때만 b가격 수평선 + 텍스트 표시
-    if show_b_lines and not df_b.empty:
-        # 회색 수평선 (직선)
-        rules = alt.Chart(df_b).mark_rule(color="gray").encode(
-            y="b가격:Q"
-        )
-
-        # 왼쪽 시작점에 빨간 텍스트 표시
-        texts = (
-            alt.Chart(df_b)
-            .mark_text(
-                align="left",
-                baseline="bottom",
-                dx=3,
-                dy=-6,
-                color="gray",
-                fontSize=11,
-                fontWeight="bold"
-            )
-            .encode(
-                x=alt.value(5),  # 왼쪽 시작 위치 고정
-                y="b가격:Q",
-                text=alt.Text("b가격:Q", format=".0f")
-            )
-        )
-
-        chart = chart + rules + texts
-
-    st.altair_chart(chart.properties(width="container", height=400), use_container_width=True)
-
-# ------------------------------------------------
-# 뒤로가기 버튼
-# ------------------------------------------------
-if st.button("⬅️ 전체 종목으로 돌아가기"):
-    st.switch_page("pages/전체 종목.py")
+    st.altair_chart(line_chart, use_container_width=True)
 
 # ------------------------------------------------
 # 💬 댓글 게시판
@@ -192,34 +157,30 @@ if st.button("⬅️ 전체 종목으로 돌아가기"):
 st.markdown("---")
 st.subheader("💬 종목 댓글 게시판")
 
-# 댓글 입력 박스
-user_name = st.text_input("작성자 이름", key="comment_user")
-comment_text = st.text_area("댓글 내용", key="comment_text")
-
-if st.button("댓글 작성 ✍️"):
-    if not user_name or not comment_text:
-        st.warning("이름과 내용을 모두 입력해주세요.")
-    else:
-        try:
-            # Supabase에 댓글 저장
+if st.session_state.user:
+    comment_text = st.text_area("댓글을 입력하세요", key="comment_text")
+    if st.button("댓글 작성 ✍️"):
+        if not comment_text.strip():
+            st.warning("내용을 입력해주세요.")
+        else:
             supabase.table("comments").insert({
                 "종목코드": stock_code,
                 "종목명": stock_name,
-                "작성자": user_name,
-                "내용": comment_text
+                "내용": comment_text,
+                "user_id": st.session_state.user.id
             }).execute()
             st.success("✅ 댓글이 등록되었습니다!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"❌ 댓글 저장 오류: {e}")
+            st.experimental_rerun()
+else:
+    st.info("🔒 로그인 후 댓글을 작성할 수 있습니다.")
 
 # ------------------------------------------------
-# 댓글 목록 불러오기
+# 댓글 목록 표시 + 수정/삭제
 # ------------------------------------------------
 try:
     res = (
         supabase.table("comments")
-        .select("작성자, 내용, 작성일")
+        .select("id, 내용, 작성일, user_id")
         .eq("종목코드", stock_code)
         .order("작성일", desc=True)
         .execute()
@@ -228,19 +189,42 @@ try:
 
     if not comments.empty:
         for _, row in comments.iterrows():
-            st.markdown(
-                f"""
-                <div style='background-color:#f7f7f7; padding:10px; border-radius:8px; margin-bottom:8px;'>
-                <b>{row['작성자']}</b> <span style='color:gray; font-size:12px;'>({pd.to_datetime(row['작성일']).strftime('%Y-%m-%d %H:%M')})</span><br>
-                {row['내용']}
-                </div>
-                """,
-                unsafe_allow_html=True
+            is_owner = (
+                st.session_state.user
+                and st.session_state.user.id == row["user_id"]
             )
+
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div style='background-color:#f7f7f7;padding:10px;border-radius:8px;margin-bottom:6px;'>
+                    <span style='color:gray;font-size:12px;'>{pd.to_datetime(row["작성일"]).strftime('%Y-%m-%d %H:%M')}</span><br>
+                    {row["내용"]}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                if is_owner:
+                    col1, col2 = st.columns([1, 1])
+                    with col1:
+                        if st.button(f"✏️ 수정_{row['id']}"):
+                            new_text = st.text_area("수정 내용", row["내용"], key=f"edit_{row['id']}")
+                            if st.button(f"저장_{row['id']}"):
+                                supabase.table("comments").update({"내용": new_text}).eq("id", row["id"]).execute()
+                                st.experimental_rerun()
+                    with col2:
+                        if st.button(f"🗑️ 삭제_{row['id']}"):
+                            supabase.table("comments").delete().eq("id", row["id"]).execute()
+                            st.experimental_rerun()
     else:
-        st.info("아직 댓글이 없습니다. 첫 댓글을 남겨보세요 💬")
+        st.info("아직 댓글이 없습니다 💬")
 
 except Exception as e:
     st.error(f"❌ 댓글 불러오기 오류: {e}")
 
-
+# ------------------------------------------------
+# 뒤로가기 버튼
+# ------------------------------------------------
+if st.button("⬅️ 전체 종목으로 돌아가기"):
+    st.switch_page("pages/전체 종목.py")
