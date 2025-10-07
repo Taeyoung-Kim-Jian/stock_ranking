@@ -159,18 +159,22 @@ else:
     if show_b and not df_b.empty:
         # 현재 종가 기준으로 가장 가까운 b가격 찾기
         df_b["diff"] = (df_b["b가격"] - current_price).abs()
-        df_b_sorted = df_b.sort_values("diff")
+        df_b_sorted = df_b.sort_values("diff").reset_index(drop=True)  # ✅ 인덱스 리셋
 
         if mode == "가까운 1개":
             visible_b = df_b_sorted.head(1)
-        elif mode == "가까운 3개":
-            idx = df_b_sorted.index[0]
-            idx_pos = df_b_sorted.index.get_loc(idx)
-            visible_b = df_b_sorted.iloc[max(0, idx_pos-1): idx_pos+2]
-        else:  # 전체
-            visible_b = df_b.copy()
 
-        # 현재 차트 구간 내 종가 범위에 있는 b가격만 표시
+        elif mode == "가까운 3개":
+            # 가장 가까운 b가격 위치 기반 ±1개씩 표시
+            nearest_idx = df_b_sorted["diff"].idxmin()
+            start_idx = max(0, nearest_idx - 1)
+            end_idx = min(len(df_b_sorted), nearest_idx + 2)
+            visible_b = df_b_sorted.iloc[start_idx:end_idx]
+
+        else:  # 전체
+            visible_b = df_b_sorted.copy()
+
+        # ✅ 현재 차트 종가 범위 내의 b가격만 표시
         y_min, y_max = df_price["종가"].min(), df_price["종가"].max()
         visible_b = visible_b[(visible_b["b가격"] >= y_min) & (visible_b["b가격"] <= y_max)]
 
