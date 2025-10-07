@@ -64,7 +64,7 @@ if not stock_code:
     st.stop()
 
 # ------------------------------------------------
-# 가격 데이터 로드 (전체)
+# 가격 데이터 로드
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_price_data(name):
@@ -101,7 +101,7 @@ def load_price_data(name):
         return pd.DataFrame()
 
 # ------------------------------------------------
-# b가격 데이터 로드 (bt_points 테이블, 종목코드 기준)
+# b가격 데이터 로드 (bt_points 테이블)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_b_prices(code):
@@ -122,7 +122,7 @@ def load_b_prices(code):
         return pd.DataFrame()
 
 # ------------------------------------------------
-# 데이터 로드 실행
+# 데이터 로드
 # ------------------------------------------------
 df_price = load_price_data(stock_name)
 df_b = load_b_prices(stock_code)
@@ -143,39 +143,33 @@ else:
         )
     )
 
-    # b가격 수평선 + 텍스트 추가
     if not df_b.empty:
-        # 수평선 (회색)
+        # 전체 수평선 (회색)
         rules = alt.Chart(df_b).mark_rule(color="gray", strokeDash=[4, 2]).encode(
             y="b가격:Q"
         )
 
-        # 수평선 위에 빨간색 텍스트 표시 (dy=-6 으로 살짝 위로 이동)
+        # 수평선 아래 텍스트 가리기용 흰색 마스크
+        masks = (
+            alt.Chart(df_b)
+            .mark_rect(color="white", opacity=1)
+            .encode(
+                y="b가격:Q",
+                y2="b가격:Q",
+                x=alt.value(0),
+                x2=alt.value(80)  # 덮는 너비 (텍스트 왼쪽 공간)
+            )
+        )
+
+        # 🔶 b가격 텍스트 (왼쪽 고정)
         texts = (
             alt.Chart(df_b)
             .mark_text(
                 align="left",
-                baseline="bottom",
+                baseline="middle",
                 dx=5,
-                dy=-6,  # 🔼 수평선 위로 살짝 이동
-                color="red",
+                color="orange",
                 fontSize=11,
                 fontWeight="bold"
             )
             .encode(
-                y="b가격:Q",
-                text=alt.Text("b가격:Q", format=".0f")
-            )
-        )
-
-        chart = (base_chart + rules + texts).properties(width="container", height=400)
-    else:
-        chart = base_chart.properties(width="container", height=400)
-
-    st.altair_chart(chart, use_container_width=True)
-
-# ------------------------------------------------
-# 뒤로가기 버튼
-# ------------------------------------------------
-if st.button("⬅️ 전체 종목으로 돌아가기"):
-    st.switch_page("pages/전체 종목.py")
