@@ -185,3 +185,62 @@ else:
 # ------------------------------------------------
 if st.button("⬅️ 전체 종목으로 돌아가기"):
     st.switch_page("pages/전체 종목.py")
+
+# ------------------------------------------------
+# 💬 댓글 게시판
+# ------------------------------------------------
+st.markdown("---")
+st.subheader("💬 종목 댓글 게시판")
+
+# 댓글 입력 박스
+user_name = st.text_input("작성자 이름", key="comment_user")
+comment_text = st.text_area("댓글 내용", key="comment_text")
+
+if st.button("댓글 작성 ✍️"):
+    if not user_name or not comment_text:
+        st.warning("이름과 내용을 모두 입력해주세요.")
+    else:
+        try:
+            # Supabase에 댓글 저장
+            supabase.table("comments").insert({
+                "종목코드": stock_code,
+                "종목명": stock_name,
+                "작성자": user_name,
+                "내용": comment_text
+            }).execute()
+            st.success("✅ 댓글이 등록되었습니다!")
+            st.experimental_rerun()
+        except Exception as e:
+            st.error(f"❌ 댓글 저장 오류: {e}")
+
+# ------------------------------------------------
+# 댓글 목록 불러오기
+# ------------------------------------------------
+try:
+    res = (
+        supabase.table("comments")
+        .select("작성자, 내용, 작성일")
+        .eq("종목코드", stock_code)
+        .order("작성일", desc=True)
+        .execute()
+    )
+    comments = pd.DataFrame(res.data)
+
+    if not comments.empty:
+        for _, row in comments.iterrows():
+            st.markdown(
+                f"""
+                <div style='background-color:#f7f7f7; padding:10px; border-radius:8px; margin-bottom:8px;'>
+                <b>{row['작성자']}</b> <span style='color:gray; font-size:12px;'>({pd.to_datetime(row['작성일']).strftime('%Y-%m-%d %H:%M')})</span><br>
+                {row['내용']}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+    else:
+        st.info("아직 댓글이 없습니다. 첫 댓글을 남겨보세요 💬")
+
+except Exception as e:
+    st.error(f"❌ 댓글 불러오기 오류: {e}")
+
+
