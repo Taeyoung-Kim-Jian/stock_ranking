@@ -92,7 +92,7 @@ if not st.session_state.user:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.user = res.user
                 st.success(f"👋 {email}님 로그인 완료!")
-                st.experimental_rerun()
+                st.rerun()
             except Exception as e:
                 st.error(f"❌ 로그인 실패: {e}")
     with col2:
