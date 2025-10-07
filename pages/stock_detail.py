@@ -4,6 +4,7 @@ import pandas as pd
 import os
 from supabase import create_client
 import altair as alt
+from datetime import timedelta
 
 # ------------------------------------------------
 # Supabase 연결
@@ -52,11 +53,11 @@ stock_name = st.session_state["selected_stock_name"]
 stock_code = st.session_state["selected_stock_code"]
 
 st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} ({stock_code}) 주가 차트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 시스템 + b가격 표시</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 + b가격 표시 + 기간 필터</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
-# 가격 데이터 로드
+# 데이터 로드
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_price_data(code):
@@ -88,9 +89,6 @@ def load_price_data(code):
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
-# ------------------------------------------------
-# b가격 데이터 로드
-# ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_b_prices(code):
     try:
@@ -105,6 +103,23 @@ def load_b_prices(code):
 
 df_price = load_price_data(stock_code)
 df_b = load_b_prices(stock_code)
+
+# ------------------------------------------------
+# 기간 선택 (라디오 버튼)
+# ------------------------------------------------
+st.subheader("⏳ 차트 기간 선택")
+period = st.radio(
+    "보기 기간 선택",
+    ("1년", "2년", "3년", "전체"),
+    horizontal=True
+)
+
+if not df_price.empty:
+    latest_date = df_price["날짜"].max()
+    if period != "전체":
+        years = int(period.replace("년", ""))
+        start_date = latest_date - timedelta(days=365 * years)
+        df_price = df_price[df_price["날짜"] >= start_date]
 
 # ------------------------------------------------
 # b가격 표시 토글
@@ -131,13 +146,13 @@ else:
         # 회색 수평선
         rules = alt.Chart(df_b).mark_rule(color="gray").encode(y="b가격:Q")
 
-        # 왼쪽에 b가격 텍스트 (align='right' + dx=-10)
+        # 가장 왼쪽 끝에 b가격 텍스트
         texts = (
             alt.Chart(df_b)
             .mark_text(
-                align="right",  # 왼쪽 정렬
+                align="left",
                 baseline="middle",
-                dx=-10,  # y축에서 왼쪽으로 10px 이동
+                dx=-250,  # 차트의 왼쪽 바깥으로 이동
                 color="orange",
                 fontSize=11,
                 fontWeight="bold"
@@ -155,7 +170,7 @@ else:
     st.altair_chart(chart, use_container_width=True)
 
 # ------------------------------------------------
-# 💬 댓글 게시판
+# 💬 댓글 시스템
 # ------------------------------------------------
 st.markdown("---")
 st.subheader("💬 종목 댓글 게시판")
