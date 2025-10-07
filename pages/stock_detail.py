@@ -10,7 +10,6 @@ import altair as alt
 # ------------------------------------------------
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
-REDIRECT_URL = os.environ.get("REDIRECT_URL") or st.secrets.get("REDIRECT_URL")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     st.error("❌ Supabase 환경변수가 설정되지 않았습니다.")
@@ -91,6 +90,7 @@ if not st.session_state.user:
             try:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.user = res.user
+                st.session_state.access_token = res.session.access_token
                 st.success(f"👋 {email}님 로그인 완료!")
                 st.rerun()
             except Exception as e:
@@ -101,7 +101,7 @@ if not st.session_state.user:
                 res = supabase.auth.sign_up({"email": email, "password": password})
                 if res.user:
                     st.success("✅ 회원가입 완료! 로그인 해주세요.")
-                    st.experimental_rerun()
+                    st.rerun()
             except Exception as e:
                 st.error(f"❌ 회원가입 실패: {e}")
 
@@ -111,7 +111,7 @@ else:
     if st.sidebar.button("로그아웃"):
         st.session_state.user = None
         supabase.auth.sign_out()
-        st.experimental_rerun()
+        st.rerun()
 
 # ------------------------------------------------
 # 차트 표시
@@ -139,25 +139,41 @@ st.subheader("💬 종목 댓글 게시판")
 
 if st.session_state.user:
     comment_text = st.text_area("댓글을 입력하세요", key="comment_text")
+
     if st.button("댓글 작성 ✍️"):
         if not comment_text.strip():
             st.warning("내용을 입력해주세요.")
         else:
             try:
-                user_id = st.session_state.user.id
-                user_email = st.session_state.user.email or "익명"
+                user = st.session_state.user
+                user_id = user.id
+                user_email = user.email or "익명"
+
+                # ✅ Supabase 세션에서 access_token 가져오기
+                session = supabase.auth.get_session()
+                if not session or not session.access_token:
+                    st.error("❌ 인증 세션이 유효하지 않습니다. 다시 로그인 해주세요.")
+                    st.stop()
+
+                # ✅ 인증된 클라이언트로 재생성
+                authed_client = create_client(
+                    SUPABASE_URL,
+                    SUPABASE_KEY,
+                    options={"access_token": session.access_token}
+                )
 
                 data = {
                     "종목코드": stock_code,
                     "종목명": stock_name,
-                    "작성자": user_email,      # ✅ DB 구조에 맞춤
+                    "작성자": user_email,
                     "내용": comment_text,
                     "user_id": user_id,
                 }
 
-                supabase.table("comments").insert(data).execute()
+                authed_client.table("comments").insert(data).execute()
+
                 st.success("✅ 댓글이 등록되었습니다!")
-                st.experimental_rerun()
+                st.rerun()
 
             except Exception as e:
                 st.error(f"❌ 댓글 저장 오류: {e}")
@@ -202,11 +218,11 @@ try:
                             new_text = st.text_area("수정 내용", row["내용"], key=f"edit_{row['id']}")
                             if st.button(f"저장_{row['id']}"):
                                 supabase.table("comments").update({"내용": new_text}).eq("id", row["id"]).execute()
-                                st.experimental_rerun()
+                                st.rerun()
                     with col2:
                         if st.button(f"🗑️ 삭제_{row['id']}"):
                             supabase.table("comments").delete().eq("id", row["id"]).execute()
-                            st.experimental_rerun()
+                            st.rerun()
     else:
         st.info("아직 댓글이 없습니다 💬")
 
