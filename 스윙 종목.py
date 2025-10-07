@@ -3,6 +3,10 @@ import streamlit as st
 import pandas as pd
 import os
 from supabase import create_client
+from header import show_header
+
+show_header()  # ✅ 공통 상단 로그인바 + 메뉴 제거
+
 
 # ------------------------------------------------
 # 환경 변수 및 Supabase 연결
@@ -174,3 +178,4 @@ st.markdown(cards_html, unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption("💡 상단 스크롤 네비게이션으로 페이지를 선택하세요. (모바일에서도 좌우 스크롤 가능)")
+
