@@ -156,7 +156,7 @@ else:
                 align="left",
                 baseline="bottom",
                 dx=3,
-                dy=-6,
+                dy=0,
                 color="gray",
                 fontSize=11,
                 fontWeight="bold"
