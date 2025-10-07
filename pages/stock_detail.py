@@ -53,7 +53,7 @@ stock_name = st.session_state["selected_stock_name"]
 stock_code = st.session_state["selected_stock_code"]
 
 st.markdown(f"<h4 style='text-align:center;'>📈 {stock_name} ({stock_code}) 주가 차트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase 기반 로그인 + 댓글 + b가격 표시 + 기간 필터</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>b가격 모드 / 기간 선택 / 댓글 시스템</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
@@ -97,6 +97,7 @@ def load_b_prices(code):
         df = pd.DataFrame(res.data)
         if not df.empty:
             df["b가격"] = df["b가격"].astype(float)
+            df = df.sort_values("b가격")
         return df
     except Exception as e:
         st.error(f"❌ b가격 데이터 로딩 오류: {e}")
@@ -107,7 +108,7 @@ df_price = load_price_data(stock_code)
 df_b = load_b_prices(stock_code)
 
 # ------------------------------------------------
-# 차트 기간 선택 (라디오 버튼)
+# 기간 선택 (라디오)
 # ------------------------------------------------
 st.subheader("⏳ 차트 기간 선택")
 period = st.radio(
@@ -124,9 +125,18 @@ if not df_price.empty:
         df_price = df_price[df_price["날짜"] >= start_date]
 
 # ------------------------------------------------
-# b가격 표시 토글
+# b가격 표시 + 모드 선택
 # ------------------------------------------------
-show_b = st.toggle("📊 b가격 표시", value=True)
+col1, col2 = st.columns([1, 3])
+with col1:
+    show_b = st.toggle("📊 b가격 표시", value=True)
+with col2:
+    mode = st.radio(
+        "b가격 표시 모드 선택",
+        ("가까운 1개", "가까운 3개", "전체"),
+        horizontal=True,
+        disabled=not show_b
+    )
 
 # ------------------------------------------------
 # 차트 표시
@@ -134,6 +144,8 @@ show_b = st.toggle("📊 b가격 표시", value=True)
 if df_price.empty:
     st.warning("⚠️ 가격 데이터 없음")
 else:
+    current_price = df_price["종가"].iloc[-1]
+
     base_chart = (
         alt.Chart(df_price)
         .mark_line(color="#f9a825")
@@ -145,21 +157,32 @@ else:
     )
 
     if show_b and not df_b.empty:
-        # 현재 표시된 y축 범위 안의 b가격만 표시
+        # 현재 종가 기준으로 가장 가까운 b가격 찾기
+        df_b["diff"] = (df_b["b가격"] - current_price).abs()
+        df_b_sorted = df_b.sort_values("diff")
+
+        if mode == "가까운 1개":
+            visible_b = df_b_sorted.head(1)
+        elif mode == "가까운 3개":
+            idx = df_b_sorted.index[0]
+            idx_pos = df_b_sorted.index.get_loc(idx)
+            visible_b = df_b_sorted.iloc[max(0, idx_pos-1): idx_pos+2]
+        else:  # 전체
+            visible_b = df_b.copy()
+
+        # 현재 차트 구간 내 종가 범위에 있는 b가격만 표시
         y_min, y_max = df_price["종가"].min(), df_price["종가"].max()
-        visible_b = df_b[(df_b["b가격"] >= y_min) & (df_b["b가격"] <= y_max)]
+        visible_b = visible_b[(visible_b["b가격"] >= y_min) & (visible_b["b가격"] <= y_max)]
 
         if not visible_b.empty:
-            # 수평선
             rules = alt.Chart(visible_b).mark_rule(color="gray").encode(y="b가격:Q")
 
-            # 텍스트 (차트의 왼쪽 끝)
             texts = (
                 alt.Chart(visible_b)
                 .mark_text(
                     align="left",
                     baseline="middle",
-                    dx=-250,  # 왼쪽 밖으로 이동
+                    dx=-250,
                     color="orange",
                     fontSize=11,
                     fontWeight="bold"
