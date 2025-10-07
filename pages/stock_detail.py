@@ -11,7 +11,7 @@ from datetime import datetime
 # ------------------------------------------------
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
-REDIRECT_URL = os.environ.get("REDIRECT_URL") or st.secrets.get("REDIRECT_URL", "http://localhost:8501")
+REDIRECT_URL = os.environ.get("REDIRECT_URL") or st.secrets.get("REDIRECT_URL")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     st.error("❌ Supabase 환경변수(SUPABASE_URL, SUPABASE_KEY)가 설정되지 않았습니다.")
@@ -58,7 +58,6 @@ def get_stock_code(name):
         st.error(f"❌ 종목코드 조회 오류: {e}")
         return None
 
-
 stock_code = get_stock_code(stock_name)
 if not stock_code:
     st.error("❌ 해당 종목의 종목코드를 찾을 수 없습니다.")
@@ -96,7 +95,6 @@ def load_price_data(name):
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
 
-
 df_price = load_price_data(stock_name)
 
 # ------------------------------------------------
@@ -107,6 +105,9 @@ if "user" not in st.session_state:
 
 st.sidebar.title("🔐 로그인 / 회원가입")
 
+# ------------------------------------------------
+# 이메일 로그인
+# ------------------------------------------------
 if not st.session_state.user:
     email = st.sidebar.text_input("이메일")
     password = st.sidebar.text_input("비밀번호", type="password")
@@ -132,7 +133,7 @@ if not st.session_state.user:
                 st.error(f"❌ 회원가입 실패: {e}")
 
     # ------------------------------------------------
-    # Google 로그인 버튼
+    # Google 로그인 (자동 리디렉션)
     # ------------------------------------------------
     st.sidebar.markdown("---")
     st.sidebar.markdown("🌐 또는 Google 계정으로 로그인")
@@ -142,21 +143,39 @@ if not st.session_state.user:
             res = supabase.auth.sign_in_with_oauth(
                 {
                     "provider": "google",
-                    "options": {"redirect_to": REDIRECT_URL},
+                    "options": {
+                        "redirect_to": REDIRECT_URL,
+                    },
                 }
             )
-            st.sidebar.markdown(f"[👉 Google 로그인 진행하기]({res.url})", unsafe_allow_html=True)
+            # ✅ 브라우저 자동 이동
+            st.markdown(
+                f"<meta http-equiv='refresh' content='0; url={res.url}'>",
+                unsafe_allow_html=True,
+            )
         except Exception as e:
             st.sidebar.error(f"❌ Google 로그인 오류: {e}")
 
 else:
     # 로그인된 사용자 표시
-    user_email = st.session_state.user.email
+    user_email = st.session_state.user.email or "Google 사용자"
     st.sidebar.success(f"👤 {user_email} 님 로그인 중")
     if st.sidebar.button("로그아웃"):
         st.session_state.user = None
         supabase.auth.sign_out()
         st.experimental_rerun()
+
+# ------------------------------------------------
+# 로그인 세션 복원 (Google 로그인 복귀 시)
+# ------------------------------------------------
+try:
+    session = supabase.auth.get_session()
+    if session and session.access_token:
+        user_info = supabase.auth.get_user()
+        if user_info and user_info.user:
+            st.session_state.user = user_info.user
+except Exception:
+    pass
 
 # ------------------------------------------------
 # 차트 표시
