@@ -73,14 +73,14 @@ def load_price_data(name):
         return pd.DataFrame()
 
 # ------------------------------------------------
-# b가격 데이터 로드
+# b가격 데이터 로드 (bt_points 테이블 사용)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_b_prices(name):
-    """Supabase의 b_points 테이블에서 해당 종목의 모든 b가격 조회"""
+    """Supabase의 bt_points 테이블에서 해당 종목의 모든 b가격 조회"""
     try:
         res = (
-            supabase.table("b_points")
+            supabase.table("bt_points")
             .select("b가격")
             .eq("종목명", name)
             .execute()
