@@ -36,28 +36,47 @@ st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>Supabase�
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로드
+# 데이터 로드 (전체 데이터)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_price_data(name):
     """
-    Supabase의 prices 테이블에서 특정 종목의 일자별 가격 데이터 조회
-    (날짜, 종가, 거래량 등 컬럼이 있다고 가정)
+    Supabase의 prices 테이블에서 특정 종목의 전체 일자별 가격 데이터 조회
+    (1000개 단위로 반복 호출하여 전체 데이터를 불러옴)
     """
     try:
-        res = (
-            supabase.table("prices")
-            .select("날짜, 종가")
-            .eq("종목명", name)
-            .order("날짜", desc=False)
-            .limit(5000)  # ✅ 최대 5000일 데이터 불러오기
-            .execute()
-        )
-        df = pd.DataFrame(res.data)
+        all_data = []
+        start = 0
+        step = 1000
+
+        while True:
+            res = (
+                supabase.table("prices")
+                .select("날짜, 종가")
+                .eq("종목명", name)
+                .order("날짜", desc=False)
+                .range(start, start + step - 1)  # ✅ 페이지네이션 방식
+                .execute()
+            )
+
+            data_chunk = res.data
+            if not data_chunk:
+                break
+
+            all_data.extend(data_chunk)
+
+            # 데이터가 step보다 적으면 마지막 페이지임
+            if len(data_chunk) < step:
+                break
+
+            start += step
+
+        df = pd.DataFrame(all_data)
         if not df.empty:
             df["날짜"] = pd.to_datetime(df["날짜"])
             df = df.sort_values("날짜")
         return df
+
     except Exception as e:
         st.error(f"❌ 가격 데이터 로딩 오류: {e}")
         return pd.DataFrame()
