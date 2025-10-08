@@ -24,8 +24,8 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ------------------------------------------------
 st.set_page_config(page_title="전체 종목 목록", layout="wide")
 
-st.markdown("<h4 style='text-align:center;'>📋 전체 종목 리스트</h4>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>행을 클릭하면 상세 차트 페이지로 이동합니다.</p>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align:center;'>📋스윙 투자 종목의 전체 리스트</h4>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray; font-size:13px;'> 해당 종목을 선택하시면 차트로 이동합니다.</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # ------------------------------------------------
