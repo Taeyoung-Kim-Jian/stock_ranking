@@ -2,6 +2,23 @@
 import streamlit as st
 import os
 from supabase import create_client
+# (예: pages/한국 돌파 종목.py 파일)
+
+# ----------------------------------------------
+# 💡 1. components 폴더의 header 파일에서 함수를 import
+from header import show_app_header
+# ----------------------------------------------
+
+import streamlit as st
+import pandas as pd
+# ... (다른 import 구문)
+# (예: pages/한국 돌파 종목.py 파일)
+
+# ... (import 구문)
+
+# ----------------------------------------------
+# 💡 2. 헤더 함수 호출 (페이지 상단에 표시됨)
+show_app_header()
 
 # ------------------------------------------------
 # Supabase 연결 및 초기화 (필요하다면 유지)
@@ -51,33 +68,6 @@ def show_app_header():
     # ✅ 앱 제목
     st.markdown("<h3 style='margin:0 0 10px 0;'>📊 Swing Investor</h3>", unsafe_allow_html=True)
 
-    # ------------------------------------------------
-    # ✅ 상단 네비게이션 버튼
-    # ------------------------------------------------
-
-    # 네비게이션 버튼을 위한 컬럼 분할
-    col_nav = st.columns(5)
-    
-    # 💡 st.button 대신 st.page_link를 사용하면 더 간결하고 페이지 전환이 명확해집니다.
-    # 하지만 st.button을 요청하셨으므로 그대로 사용합니다.
-    
-    with col_nav[0]:
-        if st.button("🏠 메인", use_container_width=True):
-            st.switch_page("app.py") # 메인 페이지 파일명 확인 (보통 app.py)
-    with col_nav[1]:
-        if st.button("🟠 국내 눌림", use_container_width=True):
-            st.switch_page("pages/한국 눌림 종목.py")
-    with col_nav[2]:
-        if st.button("🔵 국내 추격", use_container_width=True):
-            st.switch_page("pages/한국 돌파 종목.py")
-    with col_nav[3]:
-        if st.button("🟢 해외 눌림", use_container_width=True):
-            st.switch_page("pages/해외 눌림 종목.py")
-    with col_nav[4]:
-        if st.button("🔴 해외 추격", use_container_width=True):
-            st.switch_page("pages/해외 돌파 종목.py")
-
-    st.markdown("---")
 
 
 # ------------------------------------------------
