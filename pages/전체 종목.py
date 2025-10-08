@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import os
 from supabase import create_client
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # ------------------------------------------------
 # Supabase 연결
@@ -33,7 +34,7 @@ def load_total_return():
     try:
         res = (
             supabase.table("total_return")
-            .select("*")
+            .select("종목명, 시작가격, 현재가격, 수익률")
             .order("수익률", desc=True)
             .execute()
         )
@@ -49,20 +50,40 @@ if df.empty:
     st.stop()
 
 # ------------------------------------------------
-# 테이블 표시
+# AgGrid 표시 설정
 # ------------------------------------------------
-st.dataframe(
+gb = GridOptionsBuilder.from_dataframe(df)
+gb.configure_default_column(resizable=True, sortable=True, filter=True)
+gb.configure_selection(selection_mode="single", use_checkbox=False)
+gb.configure_grid_options(domLayout='normal')
+grid_options = gb.build()
+
+st.markdown("### 🔍 종목 목록")
+grid_response = AgGrid(
     df,
-    use_container_width=True,
-    hide_index=True
+    gridOptions=grid_options,
+    enable_enterprise_modules=False,
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+    theme="streamlit",
+    fit_columns_on_grid_load=True,
+    height=600,
 )
 
 # ------------------------------------------------
-# 클릭 기능 구현
+# 행 클릭 시 페이지 이동
 # ------------------------------------------------
-# Streamlit은 기본적으로 dataframe 클릭 이벤트를 지원하지 않기 때문에,
-# selectbox로 대체 (또는 streamlit-aggrid 사용 가능)
-selected = st.selectbox("🔍 차트를 보고 싶은 종목을 선택하세요:", df["종목명"].unique())
+# ------------------------------------------------
+# 행 클릭 시 페이지 이동
+# ------------------------------------------------
+# ------------------------------------------------
+# 행 클릭 시 페이지 이동
+# ------------------------------------------------
+selected = grid_response["selected_rows"]
 
-if st.button("📈 선택한 종목의 차트로 이동"):
+if len(selected) > 0:
+    selected_row = selected.iloc[0]   # ✅ DataFrame → iloc으로 접근
+    stock_name = selected_row["종목명"]
+    st.session_state["selected_stock"] = stock_name  # 세션에 저장
+
+    st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
     st.switch_page("pages/stock_detail.py")
