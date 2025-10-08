@@ -70,14 +70,23 @@ grid_response = AgGrid(
 )
 
 # ------------------------------------------------
-# 행 클릭 시 페이지 이동
+# 행 클릭 시 차트 페이지로 이동
 # ------------------------------------------------
-selected = grid_response.get("selected_rows")
+if selected is not None:
+    # DataFrame일 수도 있음
+    if isinstance(selected, pd.DataFrame):
+        selected = selected.to_dict("records")
 
-if selected is not None and len(selected) > 0:
-    selected_row = selected.iloc[0]
-    stock_name = selected_row["종목코드"]
-    st.session_state["selected_stock"] = stock_name  # 세션에 저장
+    if isinstance(selected, list) and len(selected) > 0:
+        selected_row = selected[0]
+        stock_name = selected_row.get("종목명")
+        stock_code = selected_row.get("종목코드")
 
-    st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
-    st.switch_page("pages/stock_detail.py")
+        st.session_state["selected_stock_name"] = stock_name
+        st.session_state["selected_stock_code"] = stock_code
+
+        st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
+        st.switch_page("pages/stock_detail.py")
+
+st.markdown("---")
+st.caption("💡 b가격 ±5% 구간에 위치한 종목은 매수/매도 균형 구간으로 해석할 수 있습니다.")
