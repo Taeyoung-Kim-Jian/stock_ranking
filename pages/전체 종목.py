@@ -72,16 +72,10 @@ grid_response = AgGrid(
 # ------------------------------------------------
 # 행 클릭 시 페이지 이동
 # ------------------------------------------------
-# ------------------------------------------------
-# 행 클릭 시 페이지 이동
-# ------------------------------------------------
-# ------------------------------------------------
-# 행 클릭 시 페이지 이동
-# ------------------------------------------------
-selected = grid_response["selected_rows"]
+selected = grid_response.get("selected_rows")
 
-if len(selected) > 0:
-    selected_row = selected.iloc[0]   # ✅ DataFrame → iloc으로 접근
+if selected is not None and len(selected) > 0:
+    selected_row = selected.iloc[0]
     stock_name = selected_row["종목명"]
     st.session_state["selected_stock"] = stock_name  # 세션에 저장
 
