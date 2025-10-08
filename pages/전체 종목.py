@@ -124,28 +124,25 @@ selected = get_selected_rows_safe(grid_response)
 # ------------------------------------------------
 # 선택되면 이동
 # ------------------------------------------------
-if len(selected) > 0:
-    row = selected[0]
-    stock_name = str(row.get("종목명", "")).strip()
-    stock_code = str(row.get("종목코드", "")).strip()
+   # ✅ 타입별 안전 처리
+        if selected is not None:
+            if isinstance(selected, pd.DataFrame):
+                selected = selected.to_dict("records")
 
-    if not stock_code:
-        st.warning("선택된 행에 '종목코드'가 없습니다. total_return 쿼리에 '종목코드'를 포함하세요.")
-    else:
-        st.session_state["selected_stock_name"] = stock_name
-        st.session_state["selected_stock_code"] = stock_code
+            if isinstance(selected, list) and len(selected) > 0:
+                selected_row = selected[0]
+                stock_name = selected_row.get("종목명")
+                stock_code = selected_row.get("종목코드")
 
-        # 쿼리 파라미터 세팅 (버전 호환)
-        try:
-            st.query_params.update({"code": stock_code, "name": stock_name})
-        except Exception:
-            try:
-                st.experimental_set_query_params(code=stock_code, name=stock_name)
-            except Exception:
-                pass
+                if not stock_code:
+                    st.warning("⚠️ 종목코드가 없습니다. 테이블 구조를 확인하세요.")
+                    st.stop()
 
-        st.success(f"✅ {stock_name} ({stock_code}) 차트 페이지로 이동 중...")
-        try:
-            st.switch_page("pages/stock_detail.py")
-        except Exception:
-            st.switch_page("stock_detail.py")
+                # 세션 저장 후 바로 페이지 이동
+                st.session_state["selected_stock_name"] = stock_name
+                st.session_state["selected_stock_code"] = stock_code
+                st.switch_page("pages/stock_detail.py")
+
+
+st.markdown("---")
+st.caption("💡 행을 클릭하면 해당 종목의 차트 페이지로 이동합니다.")
