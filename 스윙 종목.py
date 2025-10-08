@@ -3,6 +3,14 @@ import streamlit as st
 import pandas as pd
 import os
 from supabase import create_client
+from header import show_app_header
+
+# ----------------------------------------------
+# 💡 2. 헤더 함수 호출 (페이지 상단에 표시됨)
+show_app_header()
+# ----------------------------------------------
+
+
 
 
 # ------------------------------------------------
@@ -22,67 +30,6 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ------------------------------------------------
 st.set_page_config(page_title="스윙 종목 대시보드", layout="wide")
 
-# ------------------------------------------------
-# ✅ 상단 네비게이션
-# ------------------------------------------------
-st.markdown("""
-<style>
-.scroll-nav {
-    display: flex;
-    overflow-x: auto;
-    white-space: nowrap;
-    gap: 12px;
-    padding: 6px 8px;
-    margin-top: -5px;
-    margin-bottom: 14px;
-    scrollbar-width: thin;
-    scrollbar-color: #ccc transparent;
-}
-.scroll-nav::-webkit-scrollbar {height: 6px;}
-.scroll-nav::-webkit-scrollbar-thumb {background-color: #bbb; border-radius: 4px;}
-.icon-btn {
-    display: inline-block;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    color: #333;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-}
-.icon-btn:hover {
-    transform: scale(1.05);
-    background: #ffe9c4;
-    border-color: #f0b400;
-    color: #b35a00;
-}
-@media (max-width: 768px) {
-    .icon-btn {font-size: 12px; padding: 6px 12px;}
-}
-</style>
-""", unsafe_allow_html=True)
-
-col_nav = st.columns(5)
-with col_nav[0]:
-    if st.button("🏠 메인", use_container_width=True):
-        st.switch_page("app.py")
-with col_nav[1]:
-    if st.button("🟠 국내 눌림", use_container_width=True):
-        st.switch_page("pages/한국 눌림 종목.py")
-with col_nav[2]:
-    if st.button("🔵 국내 추격", use_container_width=True):
-        st.switch_page("pages/한국 돌파 종목.py")
-with col_nav[3]:
-    if st.button("🟢 해외 눌림", use_container_width=True):
-        st.switch_page("pages/해외 눌림 종목.py")
-with col_nav[4]:
-    if st.button("🔴 해외 추격", use_container_width=True):
-        st.switch_page("pages/해외 돌파 종목.py")
-
-st.markdown("---")
 
 # ------------------------------------------------
 # 타이틀
@@ -175,5 +122,6 @@ st.markdown(cards_html, unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption("💡 상단 스크롤 네비게이션으로 페이지를 선택하세요. (모바일에서도 좌우 스크롤 가능)")
+
 
 
