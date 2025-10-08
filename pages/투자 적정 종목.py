@@ -4,6 +4,23 @@ import pandas as pd
 import os
 from supabase import create_client
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+# (예: pages/한국 돌파 종목.py 파일)
+
+# ----------------------------------------------
+# 💡 1. components 폴더의 header 파일에서 함수를 import
+from header import show_app_header
+# ----------------------------------------------
+
+import streamlit as st
+import pandas as pd
+# ... (다른 import 구문)
+# (예: pages/한국 돌파 종목.py 파일)
+
+# ... (import 구문)
+
+# ----------------------------------------------
+# 💡 2. 헤더 함수 호출 (페이지 상단에 표시됨)
+show_app_header()
 
 # ------------------------------------------------
 # Supabase 연결
