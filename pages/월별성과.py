@@ -8,7 +8,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # ----------------------------------------------
 # 💡 1. components 폴더의 header 파일에서 함수를 import
-from components.header import show_app_header
+from header import show_app_header
 # ----------------------------------------------
 
 import streamlit as st
