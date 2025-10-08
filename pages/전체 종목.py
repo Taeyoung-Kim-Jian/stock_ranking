@@ -8,8 +8,10 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 # ------------------------------------------------
 # Supabase 연결
 # ------------------------------------------------
-SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY")
+
+# 환경 변수 또는 st.secrets에서 값 로드
+SUPABASE_URL = os.environ.get("SUPABASE_URL") or st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or st.secrets["SUPABASE_KEY"]
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     st.error("❌ Supabase 환경변수(SUPABASE_URL, SUPABASE_KEY)가 설정되지 않았습니다.")
@@ -27,14 +29,16 @@ st.markdown("<p style='text-align:center; color:gray; font-size:13px;'>행을 �
 st.markdown("---")
 
 # ------------------------------------------------
-# 데이터 로딩
+# 데이터 로딩 (종목코드를 포함하도록 수정)
 # ------------------------------------------------
 @st.cache_data(ttl=300)
 def load_total_return():
     try:
+        # 종목코드가 '종목코드'라는 컬럼명이라고 가정하고 쿼리에 추가
+        # 실제 테이블의 종목코드 컬럼명에 맞게 수정해주세요. (예: 'ticker' 등)
         res = (
             supabase.table("total_return")
-            .select("종목명, 시작가격, 현재가격, 수익률")
+            .select("종목코드, 종목명, 시작가격, 현재가격, 수익률")
             .order("수익률", desc=True)
             .execute()
         )
@@ -70,14 +74,39 @@ grid_response = AgGrid(
 )
 
 # ------------------------------------------------
-# 행 클릭 시 페이지 이동
+# 행 클릭 시 페이지 이동 (종목코드를 세션에 저장하도록 수정)
 # ------------------------------------------------
 selected = grid_response.get("selected_rows")
 
+# `selected`가 리스트 형태이고, 요소가 딕셔너리 또는 유사 딕셔너리 구조를 가질 때 처리합니다.
+# `AgGrid`의 `get("selected_rows")`는 일반적으로 리스트 또는 데이터프레임으로 반환됩니다.
 if selected is not None and len(selected) > 0:
-    selected_row = selected.iloc[0]
-    stock_name = selected_row["종목명"]
-    st.session_state["selected_stock"] = stock_name  # 세션에 저장
+    # `selected`가 리스트라면 첫 번째 요소를 사용합니다.
+    if isinstance(selected, list):
+        selected_row_data = selected[0]
+    # `selected`가 데이터프레임이라면 첫 번째 행을 사용합니다.
+    elif isinstance(selected, pd.DataFrame):
+        selected_row_data = selected.iloc[0]
+    else:
+        st.error("선택된 행 데이터를 처리할 수 없습니다.")
+        st.stop()
 
-    st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
-    st.switch_page("pages/stock_detail.py")
+    try:
+        # 종목코드와 종목명을 추출합니다.
+        stock_code = selected_row_data.get("종목코드")
+        stock_name = selected_row_data.get("종목명")
+        
+        if stock_code and stock_name:
+            # 종목코드와 종목명을 세션에 저장합니다. (상세 페이지에서 이 코드를 사용해 데이터를 조회)
+            st.session_state["selected_stock_code"] = stock_code
+            st.session_state["selected_stock_name"] = stock_name
+
+            st.success(f"✅ {stock_name} ({stock_code}) 차트 페이지로 이동 중...")
+            st.switch_page("pages/stock_detail.py")
+        else:
+            st.warning("⚠️ 선택된 행에서 종목코드 또는 종목명을 찾을 수 없습니다. (컬럼명 확인 필요)")
+
+    except KeyError:
+        st.error("❌ 선택된 행 데이터에 '종목코드' 또는 '종목명' 키가 존재하지 않습니다. Supabase 쿼리와 컬럼명을 다시 확인해주세요.")
+    except Exception as e:
+        st.error(f"❌ 페이지 이동 중 오류 발생: {e}")
