@@ -76,7 +76,7 @@ selected = grid_response.get("selected_rows")
 
 if selected is not None and len(selected) > 0:
     selected_row = selected.iloc[0]
-    stock_name = selected_row["종목명"]
+    stock_name = selected_row["종목코드"]
     st.session_state["selected_stock"] = stock_name  # 세션에 저장
 
     st.success(f"✅ {stock_name} 차트 페이지로 이동 중...")
