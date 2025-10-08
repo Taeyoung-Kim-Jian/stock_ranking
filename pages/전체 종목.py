@@ -38,7 +38,7 @@ def load_total_return():
         # 실제 테이블의 종목코드 컬럼명에 맞게 수정해주세요. (예: 'ticker' 등)
         res = (
             supabase.table("total_return")
-            .select("종목명, 시작가격, 현재가격, 수익률")
+            .select("종목코드", "종목명, 시작가격, 현재가격, 수익률")
             .order("수익률", desc=True)
             .execute()
         )
